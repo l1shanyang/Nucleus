@@ -13,6 +13,7 @@ import (
 	"nucleus/internal/db/sqlc"
 	"nucleus/internal/http/handler"
 	"nucleus/internal/http/router"
+	"nucleus/internal/service"
 	"nucleus/internal/store"
 )
 
@@ -35,9 +36,10 @@ func New(ctx context.Context, cfg config.Config) (*App, error) {
 
 	queries := sqlc.New(pool.DB())
 	noteStore := store.NewNoteStore(queries)
+	noteSvc := service.NewNoteService(noteStore)
 
 	healthHandler := handler.NewHealthHandler(pool)
-	noteHandler := handler.NewNoteHandler(noteStore)
+	noteHandler := handler.NewNoteHandler(noteSvc)
 
 	server := &http.Server{
 		Addr:              ":" + cfg.HTTP.Port,

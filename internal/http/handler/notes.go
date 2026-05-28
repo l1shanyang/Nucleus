@@ -5,11 +5,11 @@ import (
 	"strconv"
 	"strings"
 
-	"nucleus/internal/store"
+	"nucleus/internal/service"
 )
 
 type NoteHandler struct {
-	store store.NoteStore
+	svc *service.NoteService
 }
 
 type createNoteRequest struct {
@@ -17,8 +17,8 @@ type createNoteRequest struct {
 	Body  string `json:"body"`
 }
 
-func NewNoteHandler(s store.NoteStore) *NoteHandler {
-	return &NoteHandler{store: s}
+func NewNoteHandler(svc *service.NoteService) *NoteHandler {
+	return &NoteHandler{svc: svc}
 }
 
 func (h *NoteHandler) Create(w http.ResponseWriter, r *http.Request) error {
@@ -27,15 +27,12 @@ func (h *NoteHandler) Create(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	req.Title = TrimString(req.Title)
-	req.Body = TrimString(req.Body)
-	if err := Require(map[string]string{"title": req.Title, "body": req.Body}); err != nil {
-		return err
-	}
-
-	note, err := h.store.Create(r.Context(), req.Title, req.Body)
+	note, err := h.svc.Create(r.Context(), service.CreateInput{
+		Title: req.Title,
+		Body:  req.Body,
+	})
 	if err != nil {
-		return Internal("failed to create note")
+		return BadRequest(err.Error())
 	}
 
 	WriteSuccess(w, http.StatusCreated, note)
@@ -47,16 +44,13 @@ func (h *NoteHandler) List(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return BadRequest(err.Error())
 	}
-	if limit > 100 {
-		limit = 100
-	}
 
 	offset, err := parseIntWithDefault(r, "offset", 0)
 	if err != nil {
 		return BadRequest(err.Error())
 	}
 
-	notes, err := h.store.List(r.Context(), int32(limit), int32(offset))
+	notes, err := h.svc.List(r.Context(), int32(limit), int32(offset))
 	if err != nil {
 		return Internal("failed to list notes")
 	}
