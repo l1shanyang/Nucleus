@@ -18,6 +18,10 @@ type AppConfig struct {
 	Env string // local, test, production
 }
 
+func (a AppConfig) IsLocal() bool      { return a.Env == "local" }
+func (a AppConfig) IsTest() bool       { return a.Env == "test" }
+func (a AppConfig) IsProduction() bool { return a.Env == "production" }
+
 type HTTPConfig struct {
 	Port            string
 	ReadTimeout     time.Duration
