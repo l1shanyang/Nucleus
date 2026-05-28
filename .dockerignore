@@ -1,0 +1,35 @@
+# Version control
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+bin/
+.cache/
+tmp/
+
+# Documentation
+docs/
+README.md
+LICENSE
+
+# Docker
+docker-compose*.yml
+Dockerfile
+.dockerignore
+
+# Test & coverage
+*.test
+*.out
+coverage.html
+
+# OS
+.DS_Store

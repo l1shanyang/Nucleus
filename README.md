@@ -1,122 +1,109 @@
-# Nucleus Backend (Go)
+# Nucleus
 
-一个用于长期演进的后端原子项目骨架，技术栈：
+一个用于学习和长期演进的 Go 后端项目骨架。技术栈：Chi + PostgreSQL + pgx + sqlc。
 
-- Go
-- Chi
-- PostgreSQL
-- pgx/v5
-- sqlc
-- golang-migrate
+## 技术栈
 
-## 1. 本地准备
+| 层 | 技术 |
+|---|------|
+| HTTP Router | [chi/v5](https://github.com/go-chi/chi) |
+| Database Driver | [pgx/v5](https://github.com/jackc/pgx) |
+| SQL Code Gen | [sqlc](https://sqlc.dev/) |
+| Migrations | [golang-migrate](https://github.com/golang-migrate/migrate) |
+| Lint | [golangci-lint](https://golangci-lint.run/) |
 
-### 必需工具
+## 快速开始
 
-- Go (建议 1.23+)
+### 前置条件
+
+- Go 1.23+
 - Docker / Docker Compose
-- sqlc
-- migrate（可选，未安装会自动使用 Docker 版本）
+- sqlc（`make deps` 可安装）
 
-macOS 可用：
-
-```bash
-brew install go sqlc golang-migrate
-```
-
-或者使用 `make deps`（依赖 Go 已安装）：
-
-```bash
-make deps
-```
-
-## 2. 初始化环境变量
+### 1. 初始化环境
 
 ```bash
 cp .env.example .env
+set -a && source .env && set +a
 ```
 
-然后导入环境变量（zsh/bash）：
-
-```bash
-set -a
-source .env
-set +a
-```
-
-## 3. 启动数据库并迁移
+### 2. 启动数据库 & 迁移
 
 ```bash
 make db-up
 make migrate-up
 ```
 
-`make migrate-up` 会自动选择：
-
-- 本机安装了 `migrate`：走本机命令
-- 本机没安装 `migrate`：自动走 `docker compose run --rm migrate ...`
-
-## 4. 生成查询代码（可选）
-
-`internal/db/sqlc` 目录已经包含一份最小可运行实现。后续可用 sqlc 重新生成：
-
-```bash
-make sqlc-gen
-```
-
-## 5. 启动服务
+### 3. 运行
 
 ```bash
 make run
 ```
 
-默认监听：`http://localhost:8080`
+服务默认监听 `http://localhost:8080`。
 
-`make run` 会自动选择：
-
-- 本机安装了 Go：走 `go run ./cmd/api`
-- 本机没安装 Go：自动走 `docker compose up api`
-
-## 6. 快速验证
-
-健康检查：
+### 4. 验证
 
 ```bash
+# 健康检查
 curl http://localhost:8080/healthz
-```
 
-创建笔记：
-
-```bash
+# 创建笔记
 curl -X POST http://localhost:8080/api/v1/notes \
   -H "Content-Type: application/json" \
   -d '{"title":"First Note","body":"Hello Nucleus"}'
-```
 
-查询笔记：
-
-```bash
+# 查询笔记
 curl "http://localhost:8080/api/v1/notes?limit=20&offset=0"
 ```
 
-## 目录说明
+## 开发命令
 
-```text
-cmd/api                 # 程序入口
-internal/config         # 配置加载
-internal/db             # 数据库连接
-internal/db/sqlc        # 查询层（sqlc 生成或兼容实现）
-internal/http/handler   # HTTP handler
-internal/http/router    # 路由
-sql/migrations          # 数据库迁移
-sql/queries             # SQL 查询定义
+```bash
+make help           # 查看所有命令
+make build          # 构建二进制到 bin/
+make run            # 本地运行
+make test           # 运行测试
+make fmt            # 格式化代码
+make lint           # go vet 静态检查
+make check          # fmt + lint + test 完整质量门禁
+make tidy           # 整理 go.mod 依赖
+make clean          # 清理构建产物
+make deps           # 安装开发工具
+make db-up          # 启动 PostgreSQL
+make db-down        # 停止所有容器
+make migrate-up     # 执行迁移
+make migrate-down   # 回滚一个迁移
+make sqlc-gen       # 重新生成 sqlc 代码
 ```
 
-## 后续建议
+## 项目结构
 
-下一步推荐按这个顺序扩展：
+```
+cmd/api/                  # 程序入口
+internal/
+  config/                 # 配置加载
+  version/                # 构建版本信息
+  db/                     # 数据库连接池
+  db/sqlc/                # sqlc 生成的查询代码
+  http/handler/           # HTTP 处理器
+  http/router/            # 路由定义
+sql/
+  migrations/             # 数据库迁移文件
+  queries/                # SQL 查询定义
+docs/                     # 项目文档
+```
 
-1. 增加用户表与基础认证
-2. 引入 structured logging 与 request tracing
-3. 加入单元测试与 API 集成测试
-4. 设计 service 层与事务边界
+## 配置
+
+通过环境变量配置，参见 `.env.example`：
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `APP_ENV` | `local` | 运行环境 |
+| `HTTP_PORT` | `8080` | 监听端口 |
+| `DATABASE_URL` | (必填) | PostgreSQL 连接串 |
+
+## 文档
+
+项目推进方案详见 [docs/todo.md](docs/todo.md)，每阶段的讲解文档在 [docs/step/](docs/step/) 目录。

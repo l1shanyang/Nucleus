@@ -1,35 +1,45 @@
-APP_NAME := nucleus-api
+APP_NAME    := nucleus-api
+MODULE      := nucleus
 MIGRATION_DIR := sql/migrations
 SQLC_CONFIG := sqlc.yaml
-DB_URL ?= postgres://nucleus:nucleus@localhost:5432/nucleus?sslmode=disable
+DB_URL      ?= postgres://nucleus:nucleus@localhost:5432/nucleus?sslmode=disable
 DOCKER_DB_URL ?= postgres://nucleus:nucleus@db:5432/nucleus?sslmode=disable
 
-.PHONY: help deps db-up db-down migrate-up migrate-down sqlc-gen run test fmt lint
+# Build info
+VERSION     ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+COMMIT      ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+BUILD_TIME  ?= $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
+LDFLAGS     := -s -w \
+	-X $(MODULE)/internal/version.Version=$(VERSION) \
+	-X $(MODULE)/internal/version.Commit=$(COMMIT) \
+	-X $(MODULE)/internal/version.BuildTime=$(BUILD_TIME)
 
-help:
-	@echo "Available targets:"
-	@echo "  make deps          - install local tools (sqlc, migrate)"
-	@echo "  make db-up         - start PostgreSQL by docker compose"
-	@echo "  make db-down       - stop PostgreSQL"
-	@echo "  make migrate-up    - apply migrations (local migrate or docker fallback)"
-	@echo "  make migrate-down  - rollback one migration (local migrate or docker fallback)"
-	@echo "  make sqlc-gen      - generate Go code from SQL"
-	@echo "  make run           - run API server (local go or docker fallback)"
-	@echo "  make test          - run tests"
-	@echo "  make fmt           - gofmt all Go files"
-	@echo "  make lint          - run go vet"
+.PHONY: help deps db-up db-down migrate-up migrate-down sqlc-gen \
+	run build test fmt lint check tidy clean
 
-deps:
+help: ## Show this help
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
+
+# ---------------------------------------------------------------------------
+# Dependencies
+# ---------------------------------------------------------------------------
+
+deps: ## Install local tools (sqlc, migrate, golangci-lint)
 	go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
 	go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 
-db-up:
+# ---------------------------------------------------------------------------
+# Database
+# ---------------------------------------------------------------------------
+
+db-up: ## Start PostgreSQL via Docker Compose
 	docker compose up -d db
 
-db-down:
+db-down: ## Stop all Docker Compose services
 	docker compose down
 
-migrate-up:
+migrate-up: ## Apply all migrations
 	@if command -v migrate >/dev/null 2>&1; then \
 		echo "Using local migrate binary"; \
 		migrate -path $(MIGRATION_DIR) -database "$(DB_URL)" up; \
@@ -38,7 +48,7 @@ migrate-up:
 		docker compose run --rm migrate -path=/migrations -database "$(DOCKER_DB_URL)" up; \
 	fi
 
-migrate-down:
+migrate-down: ## Rollback one migration
 	@if command -v migrate >/dev/null 2>&1; then \
 		echo "Using local migrate binary"; \
 		migrate -path $(MIGRATION_DIR) -database "$(DB_URL)" down 1; \
@@ -47,10 +57,23 @@ migrate-down:
 		docker compose run --rm migrate -path=/migrations -database "$(DOCKER_DB_URL)" down 1; \
 	fi
 
-sqlc-gen:
+# ---------------------------------------------------------------------------
+# Code generation
+# ---------------------------------------------------------------------------
+
+sqlc-gen: ## Regenerate Go code from SQL queries
 	sqlc generate -f $(SQLC_CONFIG)
 
-run:
+# ---------------------------------------------------------------------------
+# Build & Run
+# ---------------------------------------------------------------------------
+
+build: ## Build the API binary to bin/
+	@mkdir -p bin
+	go build -ldflags '$(LDFLAGS)' -o bin/$(APP_NAME) ./cmd/api
+	@echo "Built: bin/$(APP_NAME) ($(VERSION), $(COMMIT))"
+
+run: ## Run API server locally (or via Docker if Go not found)
 	@if command -v go >/dev/null 2>&1; then \
 		echo "Using local Go toolchain"; \
 		go run ./cmd/api; \
@@ -59,11 +82,26 @@ run:
 		docker compose up api; \
 	fi
 
-test:
-	go test ./...
+# ---------------------------------------------------------------------------
+# Quality
+# ---------------------------------------------------------------------------
 
-fmt:
+test: ## Run all tests
+	go test -v -count=1 ./...
+
+fmt: ## Format all Go files
 	gofmt -w $$(find . -name '*.go' -type f)
 
-lint:
+lint: ## Run go vet
 	go vet ./...
+
+check: fmt lint test ## Run fmt + lint + test (full quality gate)
+
+tidy: ## Tidy and verify go.mod
+	go mod tidy
+	go mod verify
+
+clean: ## Remove build artifacts
+	rm -rf bin/
+	rm -f *.out coverage.html
+	@echo "Cleaned"
