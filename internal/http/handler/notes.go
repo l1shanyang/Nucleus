@@ -32,14 +32,14 @@ func NewNoteHandler(queries NoteQueries) *NoteHandler {
 func (h *NoteHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createNoteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid json")
+		WriteError(w, http.StatusBadRequest, "INVALID_JSON", "invalid json body")
 		return
 	}
 
 	req.Title = strings.TrimSpace(req.Title)
 	req.Body = strings.TrimSpace(req.Body)
 	if req.Title == "" || req.Body == "" {
-		writeError(w, http.StatusBadRequest, "title and body are required")
+		WriteError(w, http.StatusBadRequest, "VALIDATION_ERROR", "title and body are required")
 		return
 	}
 
@@ -48,17 +48,17 @@ func (h *NoteHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Body:  req.Body,
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to create note")
+		WriteError(w, http.StatusInternalServerError, "INTERNAL", "failed to create note")
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, note)
+	WriteSuccess(w, http.StatusCreated, note)
 }
 
 func (h *NoteHandler) List(w http.ResponseWriter, r *http.Request) {
 	limit, err := parseIntWithDefault(r, "limit", 20)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		WriteError(w, http.StatusBadRequest, "INVALID_PARAM", err.Error())
 		return
 	}
 	if limit > 100 {
@@ -67,7 +67,7 @@ func (h *NoteHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	offset, err := parseIntWithDefault(r, "offset", 0)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		WriteError(w, http.StatusBadRequest, "INVALID_PARAM", err.Error())
 		return
 	}
 
@@ -76,11 +76,14 @@ func (h *NoteHandler) List(w http.ResponseWriter, r *http.Request) {
 		Offset: int32(offset),
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list notes")
+		WriteError(w, http.StatusInternalServerError, "INTERNAL", "failed to list notes")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, notes)
+	WriteList(w, notes, map[string]any{
+		"limit":  limit,
+		"offset": offset,
+	})
 }
 
 func parseIntWithDefault(r *http.Request, key string, defaultValue int) (int, error) {
