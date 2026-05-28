@@ -29,18 +29,16 @@ func NewNoteHandler(queries NoteQueries) *NoteHandler {
 	return &NoteHandler{queries: queries}
 }
 
-func (h *NoteHandler) Create(w http.ResponseWriter, r *http.Request) {
+func (h *NoteHandler) Create(w http.ResponseWriter, r *http.Request) error {
 	var req createNoteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		WriteError(w, http.StatusBadRequest, "INVALID_JSON", "invalid json body")
-		return
+		return BadRequest("invalid json body")
 	}
 
 	req.Title = strings.TrimSpace(req.Title)
 	req.Body = strings.TrimSpace(req.Body)
 	if req.Title == "" || req.Body == "" {
-		WriteError(w, http.StatusBadRequest, "VALIDATION_ERROR", "title and body are required")
-		return
+		return BadRequest("title and body are required")
 	}
 
 	note, err := h.queries.CreateNote(r.Context(), sqlc.CreateNoteParams{
@@ -48,18 +46,17 @@ func (h *NoteHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Body:  req.Body,
 	})
 	if err != nil {
-		WriteError(w, http.StatusInternalServerError, "INTERNAL", "failed to create note")
-		return
+		return Internal("failed to create note")
 	}
 
 	WriteSuccess(w, http.StatusCreated, note)
+	return nil
 }
 
-func (h *NoteHandler) List(w http.ResponseWriter, r *http.Request) {
+func (h *NoteHandler) List(w http.ResponseWriter, r *http.Request) error {
 	limit, err := parseIntWithDefault(r, "limit", 20)
 	if err != nil {
-		WriteError(w, http.StatusBadRequest, "INVALID_PARAM", err.Error())
-		return
+		return BadRequest(err.Error())
 	}
 	if limit > 100 {
 		limit = 100
@@ -67,8 +64,7 @@ func (h *NoteHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	offset, err := parseIntWithDefault(r, "offset", 0)
 	if err != nil {
-		WriteError(w, http.StatusBadRequest, "INVALID_PARAM", err.Error())
-		return
+		return BadRequest(err.Error())
 	}
 
 	notes, err := h.queries.ListNotes(r.Context(), sqlc.ListNotesParams{
@@ -76,14 +72,14 @@ func (h *NoteHandler) List(w http.ResponseWriter, r *http.Request) {
 		Offset: int32(offset),
 	})
 	if err != nil {
-		WriteError(w, http.StatusInternalServerError, "INTERNAL", "failed to list notes")
-		return
+		return Internal("failed to list notes")
 	}
 
 	WriteList(w, notes, map[string]any{
 		"limit":  limit,
 		"offset": offset,
 	})
+	return nil
 }
 
 func parseIntWithDefault(r *http.Request, key string, defaultValue int) (int, error) {

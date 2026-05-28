@@ -21,8 +21,8 @@ func New(healthHandler *handler.HealthHandler, noteHandler *handler.NoteHandler)
 	r.Get("/readyz", healthHandler.Ready)
 
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Post("/notes", noteHandler.Create)
-		r.Get("/notes", noteHandler.List)
+		r.Post("/notes", handler.WrapHandler(noteHandler.Create))
+		r.Get("/notes", handler.WrapHandler(noteHandler.List))
 	})
 
 	return r
