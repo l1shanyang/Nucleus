@@ -6,20 +6,22 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"nucleus/internal/config"
 )
 
-func NewPool(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
-	cfg, err := pgxpool.ParseConfig(databaseURL)
+func NewPool(ctx context.Context, cfg config.DatabaseConfig) (*pgxpool.Pool, error) {
+	poolCfg, err := pgxpool.ParseConfig(cfg.URL)
 	if err != nil {
 		return nil, fmt.Errorf("parse database url: %w", err)
 	}
 
-	cfg.MaxConns = 10
-	cfg.MinConns = 1
-	cfg.MaxConnIdleTime = 10 * time.Minute
-	cfg.HealthCheckPeriod = 30 * time.Second
+	poolCfg.MaxConns = int32(cfg.MaxOpenConns)
+	poolCfg.MinConns = int32(cfg.MaxIdleConns)
+	poolCfg.MaxConnIdleTime = cfg.MaxIdleTime
+	poolCfg.HealthCheckPeriod = 30 * time.Second
 
-	pool, err := pgxpool.NewWithConfig(ctx, cfg)
+	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
 	if err != nil {
 		return nil, fmt.Errorf("create pool: %w", err)
 	}

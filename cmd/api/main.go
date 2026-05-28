@@ -26,7 +26,7 @@ func main() {
 		log.Fatalf("load config: %v", err)
 	}
 
-	dbPool, err := db.NewPool(ctx, cfg.DatabaseURL)
+	dbPool, err := db.NewPool(ctx, cfg.Database)
 	if err != nil {
 		log.Fatalf("open database: %v", err)
 	}
@@ -41,17 +41,17 @@ func main() {
 	noteHandler := handler.NewNoteHandler(queries)
 
 	srv := &http.Server{
-		Addr:              ":" + cfg.HTTPPort,
+		Addr:              ":" + cfg.HTTP.Port,
 		Handler:           router.New(healthHandler, noteHandler),
 		ReadHeaderTimeout: 10 * time.Second,
-		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      15 * time.Second,
-		IdleTimeout:       60 * time.Second,
+		ReadTimeout:       cfg.HTTP.ReadTimeout,
+		WriteTimeout:      cfg.HTTP.WriteTimeout,
+		IdleTimeout:       cfg.HTTP.IdleTimeout,
 	}
 
 	errCh := make(chan error, 1)
 	go func() {
-		log.Printf("server listening on :%s (%s)", cfg.HTTPPort, cfg.AppEnv)
+		log.Printf("server listening on :%s (%s)", cfg.HTTP.Port, cfg.App.Env)
 		errCh <- srv.ListenAndServe()
 	}()
 
@@ -64,7 +64,7 @@ func main() {
 		}
 	}
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.HTTP.ShutdownTimeout)
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Printf("graceful shutdown failed: %v", err)
