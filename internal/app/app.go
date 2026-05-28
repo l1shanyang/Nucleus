@@ -33,7 +33,7 @@ func New(ctx context.Context, cfg config.Config) (*App, error) {
 	}
 
 	queries := sqlc.New(pool.DB())
-	healthHandler := handler.NewHealthHandler()
+	healthHandler := handler.NewHealthHandler(pool)
 	noteHandler := handler.NewNoteHandler(queries)
 
 	server := &http.Server{

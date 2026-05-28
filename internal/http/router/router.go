@@ -17,7 +17,8 @@ func New(healthHandler *handler.HealthHandler, noteHandler *handler.NoteHandler)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(30 * time.Second))
 
-	r.Get("/healthz", healthHandler.Get)
+	r.Get("/healthz", healthHandler.Live)
+	r.Get("/readyz", healthHandler.Ready)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Post("/notes", noteHandler.Create)
