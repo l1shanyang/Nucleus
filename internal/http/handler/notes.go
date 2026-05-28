@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -31,14 +30,14 @@ func NewNoteHandler(queries NoteQueries) *NoteHandler {
 
 func (h *NoteHandler) Create(w http.ResponseWriter, r *http.Request) error {
 	var req createNoteRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return BadRequest("invalid json body")
+	if err := DecodeJSON(r, &req); err != nil {
+		return err
 	}
 
-	req.Title = strings.TrimSpace(req.Title)
-	req.Body = strings.TrimSpace(req.Body)
-	if req.Title == "" || req.Body == "" {
-		return BadRequest("title and body are required")
+	req.Title = TrimString(req.Title)
+	req.Body = TrimString(req.Body)
+	if err := Require(map[string]string{"title": req.Title, "body": req.Body}); err != nil {
+		return err
 	}
 
 	note, err := h.queries.CreateNote(r.Context(), sqlc.CreateNoteParams{
