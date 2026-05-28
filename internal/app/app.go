@@ -13,6 +13,7 @@ import (
 	"nucleus/internal/db/sqlc"
 	"nucleus/internal/http/handler"
 	"nucleus/internal/http/router"
+	"nucleus/internal/store"
 )
 
 type App struct {
@@ -33,8 +34,10 @@ func New(ctx context.Context, cfg config.Config) (*App, error) {
 	}
 
 	queries := sqlc.New(pool.DB())
+	noteStore := store.NewNoteStore(queries)
+
 	healthHandler := handler.NewHealthHandler(pool)
-	noteHandler := handler.NewNoteHandler(queries)
+	noteHandler := handler.NewNoteHandler(noteStore)
 
 	server := &http.Server{
 		Addr:              ":" + cfg.HTTP.Port,

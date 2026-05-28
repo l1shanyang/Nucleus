@@ -1,22 +1,15 @@
 package handler
 
 import (
-	"context"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"nucleus/internal/db/sqlc"
+	"nucleus/internal/store"
 )
 
-type NoteQueries interface {
-	CreateNote(ctx context.Context, arg sqlc.CreateNoteParams) (sqlc.Note, error)
-	ListNotes(ctx context.Context, arg sqlc.ListNotesParams) ([]sqlc.Note, error)
-}
-
 type NoteHandler struct {
-	queries NoteQueries
+	store store.NoteStore
 }
 
 type createNoteRequest struct {
@@ -24,8 +17,8 @@ type createNoteRequest struct {
 	Body  string `json:"body"`
 }
 
-func NewNoteHandler(queries NoteQueries) *NoteHandler {
-	return &NoteHandler{queries: queries}
+func NewNoteHandler(s store.NoteStore) *NoteHandler {
+	return &NoteHandler{store: s}
 }
 
 func (h *NoteHandler) Create(w http.ResponseWriter, r *http.Request) error {
@@ -40,10 +33,7 @@ func (h *NoteHandler) Create(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	note, err := h.queries.CreateNote(r.Context(), sqlc.CreateNoteParams{
-		Title: req.Title,
-		Body:  req.Body,
-	})
+	note, err := h.store.Create(r.Context(), req.Title, req.Body)
 	if err != nil {
 		return Internal("failed to create note")
 	}
@@ -66,10 +56,7 @@ func (h *NoteHandler) List(w http.ResponseWriter, r *http.Request) error {
 		return BadRequest(err.Error())
 	}
 
-	notes, err := h.queries.ListNotes(r.Context(), sqlc.ListNotesParams{
-		Limit:  int32(limit),
-		Offset: int32(offset),
-	})
+	notes, err := h.store.List(r.Context(), int32(limit), int32(offset))
 	if err != nil {
 		return Internal("failed to list notes")
 	}
@@ -89,7 +76,11 @@ func parseIntWithDefault(r *http.Request, key string, defaultValue int) (int, er
 
 	v, err := strconv.Atoi(value)
 	if err != nil || v < 0 {
-		return 0, fmt.Errorf("%s must be a non-negative integer", key)
+		return 0, &AppError{
+			Status:  http.StatusBadRequest,
+			Code:    "INVALID_PARAM",
+			Message: key + " must be a non-negative integer",
+		}
 	}
 
 	return v, nil
