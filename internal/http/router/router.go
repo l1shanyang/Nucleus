@@ -5,21 +5,28 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	chimw "github.com/go-chi/chi/v5/middleware"
 
 	"nucleus/internal/http/handler"
+	"nucleus/internal/http/middleware"
 )
 
 func New(healthHandler *handler.HealthHandler, noteHandler *handler.NoteHandler) http.Handler {
 	r := chi.NewRouter()
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.Timeout(30 * time.Second))
 
+	// 全局中间件
+	r.Use(chimw.RequestID)
+	r.Use(chimw.RealIP)
+	r.Use(chimw.Recoverer)
+	r.Use(chimw.Timeout(30 * time.Second))
+	r.Use(middleware.SecurityHeaders)
+	r.Use(middleware.CORS("*"))
+
+	// 运维端点
 	r.Get("/healthz", healthHandler.Live)
 	r.Get("/readyz", healthHandler.Ready)
 
+	// 业务 API
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Post("/notes", handler.WrapHandler(noteHandler.Create))
 		r.Get("/notes", handler.WrapHandler(noteHandler.List))
