@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"nucleus/internal/config"
@@ -43,4 +44,9 @@ func (p *Pool) Close() {
 
 func (p *Pool) DB() *pgxpool.Pool {
 	return p.inner
+}
+
+// BeginTx 开启一个数据库事务。
+func (p *Pool) BeginTx(ctx context.Context) (pgx.Tx, error) {
+	return p.inner.Begin(ctx)
 }

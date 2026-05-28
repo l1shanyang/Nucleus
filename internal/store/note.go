@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"nucleus/internal/db/sqlc"
 )
 
@@ -19,6 +21,7 @@ type Note struct {
 type NoteStore interface {
 	Create(ctx context.Context, title, body string) (Note, error)
 	List(ctx context.Context, limit, offset int32) ([]Note, error)
+	WithTx(tx pgx.Tx) NoteStore
 }
 
 // noteStore 基于 sqlc 的实现。
@@ -55,6 +58,10 @@ func (s *noteStore) List(ctx context.Context, limit, offset int32) ([]Note, erro
 		notes[i] = toNote(row)
 	}
 	return notes, nil
+}
+
+func (s *noteStore) WithTx(tx pgx.Tx) NoteStore {
+	return &noteStore{q: s.q.WithTx(tx)}
 }
 
 func toNote(row sqlc.Note) Note {
