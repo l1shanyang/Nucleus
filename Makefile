@@ -33,8 +33,8 @@ versions: ## Print pinned tool versions
 version-check: ## Verify local and checked-in tool versions match versions.env
 	@test "$$(go env GOVERSION)" = "go$(GO_VERSION)" || \
 		(echo "Go version mismatch: expected go$(GO_VERSION), got $$(go env GOVERSION)"; exit 1)
-	@grep -q '^toolchain go$(GO_VERSION)$$' go.mod || \
-		(echo "go.mod toolchain mismatch: expected toolchain go$(GO_VERSION)"; exit 1)
+	@grep -q '^go 1.26.0$$' go.mod || \
+		(echo "go.mod language version mismatch: expected go 1.26.0"; exit 1)
 	@grep -q '^ARG GO_VERSION=$(GO_VERSION)$$' Dockerfile || \
 		(echo "Dockerfile GO_VERSION mismatch: expected $(GO_VERSION)"; exit 1)
 	@grep -q 'image: golang:$(GO_VERSION)' docker-compose.yml || \
@@ -53,7 +53,7 @@ version-check: ## Verify local and checked-in tool versions match versions.env
 deps: version-check ## Install pinned local tools
 	go install github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION)
 	go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@$(MIGRATE_VERSION)
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 	go install golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION)
 
 # ---------------------------------------------------------------------------
@@ -120,7 +120,7 @@ fmt: ## Format all Go files
 	gofmt -w $$(find . -name '*.go' -type f)
 
 lint: version-check ## Run pinned golangci-lint
-	go run github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run
+	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run
 
 vuln: version-check ## Check for known vulnerabilities
 	go run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) ./...

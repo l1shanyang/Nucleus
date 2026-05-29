@@ -83,6 +83,4 @@ jobs:
           cache: true
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: ${{ steps.versions.outputs.GOLANGCI_LINT_VERSION }}
+        run: go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${{ steps.versions.outputs.GOLANGCI_LINT_VERSION }} run

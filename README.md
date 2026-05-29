@@ -125,7 +125,7 @@ docs/                     # 项目文档
 | 变量 | 用途 |
 |------|------|
 | `GO_VERSION` | 本地检查、CI setup-go、Docker build arg |
-| `GOLANGCI_LINT_VERSION` | CI lint action、`make lint` |
+| `GOLANGCI_LINT_VERSION` | CI lint command、`make lint` |
 | `SQLC_VERSION` | `make sqlc-gen`、`make deps` |
 | `MIGRATE_VERSION` | `make migrate-up/down`、`make deps` |
 | `GOVULNCHECK_VERSION` | `make vuln`、CI vulnerability check |
