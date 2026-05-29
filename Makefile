@@ -111,8 +111,7 @@ lint: ## Run go vet
 	go vet ./...
 
 vuln: ## Check for known vulnerabilities
-	@go install golang.org/x/vuln/cmd/govulncheck@latest
-	govulncheck ./...
+	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
 check: fmt lint test vuln ## Run fmt + lint + test + vuln (full quality gate)
 

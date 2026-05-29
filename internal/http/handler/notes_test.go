@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"context"
+
 	"nucleus/internal/http/handler"
 	"nucleus/internal/service"
 	"nucleus/internal/store/storetest"
@@ -117,7 +119,7 @@ func TestNoteHandler_List(t *testing.T) {
 
 	// 预填数据
 	for i := 0; i < 3; i++ {
-		mock.Create(t.Context(), "Note", "Body")
+		mock.Create(context.Background(), "Note", "Body")
 	}
 
 	tests := []struct {
