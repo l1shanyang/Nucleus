@@ -15,7 +15,7 @@ LDFLAGS     := -s -w \
 	-X $(MODULE)/internal/version.BuildTime=$(BUILD_TIME)
 
 .PHONY: help deps db-up db-down migrate-up migrate-down sqlc-gen \
-	run build docker-build test cover fmt lint check tidy clean
+	run build docker-build test cover fmt lint vuln check tidy clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -110,7 +110,11 @@ fmt: ## Format all Go files
 lint: ## Run go vet
 	go vet ./...
 
-check: fmt lint test ## Run fmt + lint + test (full quality gate)
+vuln: ## Check for known vulnerabilities
+	@go install golang.org/x/vuln/cmd/govulncheck@latest
+	govulncheck ./...
+
+check: fmt lint test vuln ## Run fmt + lint + test + vuln (full quality gate)
 
 tidy: ## Tidy and verify go.mod
 	go mod tidy
