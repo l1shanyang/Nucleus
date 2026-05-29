@@ -15,7 +15,7 @@ LDFLAGS     := -s -w \
 	-X $(MODULE)/internal/version.BuildTime=$(BUILD_TIME)
 
 .PHONY: help deps db-up db-down migrate-up migrate-down sqlc-gen \
-	run build test fmt lint check tidy clean
+	run build test cover fmt lint check tidy clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -88,6 +88,11 @@ run: ## Run API server locally (or via Docker if Go not found)
 
 test: ## Run all tests
 	go test -v -count=1 ./...
+
+cover: ## Run tests with coverage report
+	go test -coverprofile=coverage.out ./...
+	go tool cover -func=coverage.out | tail -1
+	@echo "Open HTML report: go tool cover -html=coverage.out"
 
 fmt: ## Format all Go files
 	gofmt -w $$(find . -name '*.go' -type f)
