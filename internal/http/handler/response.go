@@ -47,7 +47,7 @@ func WriteList(w http.ResponseWriter, data any, meta map[string]any) {
 }
 
 // WriteError 写入业务错误响应。
-func WriteError(w http.ResponseWriter, status int, code string, message string) {
+func WriteError(w http.ResponseWriter, status int, code, message string) {
 	writeJSON(w, status, ErrorResponse{
 		Error: ErrorBody{Code: code, Message: message},
 	})

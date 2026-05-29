@@ -25,7 +25,7 @@ help: ## Show this help
 # Dependencies
 # ---------------------------------------------------------------------------
 
-deps: ## Install local tools (sqlc, migrate, golangci-lint)
+deps: ## Install local tools (sqlc, migrate)
 	go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
 	go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 
@@ -107,8 +107,13 @@ cover: ## Run tests with coverage report
 fmt: ## Format all Go files
 	gofmt -w $$(find . -name '*.go' -type f)
 
-lint: ## Run go vet
-	go vet ./...
+lint: ## Run golangci-lint (or go vet as fallback)
+	@if command -v golangci-lint >/dev/null 2>&1; then \
+		golangci-lint run; \
+	else \
+		echo "golangci-lint not found, falling back to go vet"; \
+		go vet ./...; \
+	fi
 
 vuln: ## Check for known vulnerabilities
 	go run golang.org/x/vuln/cmd/govulncheck@latest ./...

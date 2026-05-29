@@ -102,7 +102,9 @@ func TestNoteService_List(t *testing.T) {
 
 	// 预填数据
 	for i := 0; i < 5; i++ {
-		svc.Create(context.Background(), service.CreateInput{Title: "Note", Body: "Body"})
+		if _, err := svc.Create(context.Background(), service.CreateInput{Title: "Note", Body: "Body"}); err != nil {
+			t.Fatalf("seed data: %v", err)
+		}
 	}
 
 	tests := []struct {

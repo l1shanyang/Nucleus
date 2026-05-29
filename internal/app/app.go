@@ -18,12 +18,12 @@ import (
 )
 
 type App struct {
-	cfg    config.Config
+	cfg    *config.Config
 	pool   *db.Pool
 	server *http.Server
 }
 
-func New(ctx context.Context, cfg config.Config) (*App, error) {
+func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	pool, err := db.NewPool(ctx, cfg.Database)
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)

@@ -145,7 +145,7 @@ func TestNoteHandler_Create_StoreError(t *testing.T) {
 
 func TestWrapHandler_WrappedAppError(t *testing.T) {
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
 
 	handler.WrapHandler(func(http.ResponseWriter, *http.Request) error {
 		return fmt.Errorf("wrapped: %w", handler.NotFound("missing"))
@@ -161,7 +161,9 @@ func TestNoteHandler_List(t *testing.T) {
 
 	// 预填数据
 	for i := 0; i < 3; i++ {
-		mock.Create(context.Background(), "Note", "Body")
+		if _, err := mock.Create(context.Background(), "Note", "Body"); err != nil {
+			t.Fatalf("seed data: %v", err)
+		}
 	}
 
 	tests := []struct {
@@ -178,7 +180,7 @@ func TestNoteHandler_List(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, "/api/v1/notes"+tt.query, nil)
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/notes"+tt.query, http.NoBody)
 			w := httptest.NewRecorder()
 
 			handler.WrapHandler(h.List)(w, req)

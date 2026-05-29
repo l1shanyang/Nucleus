@@ -43,8 +43,8 @@ type LogConfig struct {
 	Level string // debug, info, warn, error
 }
 
-func Load() (Config, error) {
-	cfg := Config{
+func Load() (*Config, error) {
+	cfg := &Config{
 		App: AppConfig{
 			Env: getenv("APP_ENV", "local"),
 		},
@@ -68,13 +68,13 @@ func Load() (Config, error) {
 	}
 
 	if err := cfg.validate(); err != nil {
-		return Config{}, err
+		return nil, err
 	}
 
 	return cfg, nil
 }
 
-func (c Config) validate() error {
+func (c *Config) validate() error {
 	if c.Database.URL == "" {
 		return fmt.Errorf("DATABASE_URL is required")
 	}
