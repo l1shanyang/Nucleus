@@ -13,7 +13,6 @@
 | `.editorconfig` | 新增 | 统一不同编辑器/IDE 的代码风格 |
 | `Makefile` | 改写 | 增加 build、check、tidy、clean 等命令，支持构建信息注入 |
 | `.golangci.yml` | 新增 | golangci-lint 配置，启用常用 linter |
-| `versions.env` | 新增 | 固定 Go 与开发工具版本，避免本地/CI 漂移 |
 | `internal/version/version.go` | 新增 | 构建版本信息包 |
 | `README.md` | 改写 | 更规范的项目文档 |
 
@@ -139,10 +138,10 @@ build:
 #### (3) check 命令
 
 ```makefile
-check: version-check fmt lint test vuln
+check: fmt lint test vuln
 ```
 
-一条命令跑完版本检查、格式化、静态检查、测试和漏洞扫描。可以作为 CI 的入口命令，也可以在提交前手动跑一下确认没问题。
+一条命令跑完格式化、静态检查、测试和漏洞扫描。可以在提交前手动跑一下确认没问题。
 
 #### (4) tidy 命令
 
@@ -166,24 +165,23 @@ help:
 
 自动从 Makefile 中提取所有带 `## 注释` 的 target，格式化输出。好处是：加新命令时只要写上 `## 说明`，help 就会自动更新。
 
-### 2.5 versions.env — 工具版本清单
+### 2.5 Makefile 工具版本 — 轻量约束
 
 **为什么需要？**
 
-CI 和本地最容易出问题的地方就是工具版本不同。例如本地安装了 `golangci-lint 2.x`，但 CI 使用 `1.x`，同一份配置就可能在一个环境通过、另一个环境失败。
+代码生成、迁移和 lint 这类工具如果完全使用本机版本，容易出现“同一份代码生成不同结果”。但本项目定位是学习型基础脚手架，不需要引入复杂的集中版本系统。
 
-`versions.env` 固定这些版本：
+因此工具版本直接放在 Makefile 顶部：
 
-```env
-GO_VERSION=1.26.3
+```makefile
+GO_VERSION := 1.26
 GOLANGCI_LINT_VERSION=v2.12.2
 SQLC_VERSION=v1.31.1
 MIGRATE_VERSION=v4.19.1
 GOVULNCHECK_VERSION=v1.3.0
-POSTGRES_VERSION=17
 ```
 
-Makefile 和 CI 都读取这个文件。本地执行 `make lint`、`make sqlc-gen`、`make migrate-up` 时，不再使用本机随机安装的版本，而是使用仓库声明的固定版本。
+本地执行 `make lint`、`make sqlc-gen`、`make migrate-up` 时，会使用 Makefile 中声明的固定版本。这样足够清晰，也不会把脚手架复杂化。
 
 ### 2.6 .golangci.yml — 静态分析配置
 
@@ -260,7 +258,7 @@ make build
 | `.dockerignore` | 控制哪些文件不进入 Docker 构建上下文 |
 | `.editorconfig` | 跨编辑器统一代码风格 |
 | Makefile | 项目的命令入口，新人看 help 就能上手 |
-| `versions.env` | 固定本地、CI、Docker 构建使用的工具版本 |
+| Makefile 工具版本 | 固定关键开发工具版本，避免代码生成和 lint 漂移 |
 | `-ldflags` | Go 编译时注入变量的机制 |
 | `go mod tidy` | 保持依赖声明干净 |
 | golangci-lint | Go 静态分析工具，比 `go vet` 更强大 |

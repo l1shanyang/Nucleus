@@ -1,10 +1,14 @@
 APP_NAME    := nucleus-api
 MODULE      := nucleus
-include versions.env
 MIGRATION_DIR := sql/migrations
 SQLC_CONFIG := sqlc.yaml
 DB_URL      ?= postgres://nucleus:nucleus@localhost:5432/nucleus?sslmode=disable
 DOCKER_DB_URL ?= postgres://nucleus:nucleus@db:5432/nucleus?sslmode=disable
+GO_VERSION := 1.26
+GOLANGCI_LINT_VERSION := v2.12.2
+SQLC_VERSION := v1.31.1
+MIGRATE_VERSION := v4.19.1
+GOVULNCHECK_VERSION := v1.3.0
 
 # Build info
 VERSION     ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -15,7 +19,7 @@ LDFLAGS     := -s -w \
 	-X $(MODULE)/internal/version.Commit=$(COMMIT) \
 	-X $(MODULE)/internal/version.BuildTime=$(BUILD_TIME)
 
-.PHONY: help versions version-check deps db-up db-down migrate-up migrate-down sqlc-gen \
+.PHONY: help versions deps db-up db-down migrate-up migrate-down sqlc-gen \
 	run build docker-build test cover fmt lint vuln check tidy clean
 
 help: ## Show this help
@@ -28,29 +32,12 @@ versions: ## Print pinned tool versions
 	@echo "sqlc: $(SQLC_VERSION)"
 	@echo "migrate: $(MIGRATE_VERSION)"
 	@echo "govulncheck: $(GOVULNCHECK_VERSION)"
-	@echo "PostgreSQL: $(POSTGRES_VERSION)"
-
-version-check: ## Verify local and checked-in tool versions match versions.env
-	@test "$$(go env GOVERSION)" = "go$(GO_VERSION)" || \
-		(echo "Go version mismatch: expected go$(GO_VERSION), got $$(go env GOVERSION)"; exit 1)
-	@grep -q '^go 1.26.0$$' go.mod || \
-		(echo "go.mod language version mismatch: expected go 1.26.0"; exit 1)
-	@grep -q '^ARG GO_VERSION=$(GO_VERSION)$$' Dockerfile || \
-		(echo "Dockerfile GO_VERSION mismatch: expected $(GO_VERSION)"; exit 1)
-	@grep -q 'image: golang:$(GO_VERSION)' docker-compose.yml || \
-		(echo "docker-compose Go image mismatch: expected golang:$(GO_VERSION)"; exit 1)
-	@grep -q 'image: migrate/migrate:$(MIGRATE_IMAGE_VERSION)' docker-compose.yml || \
-		(echo "docker-compose migrate image mismatch: expected migrate/migrate:$(MIGRATE_IMAGE_VERSION)"; exit 1)
-	@grep -q 'image: postgres:$(POSTGRES_VERSION)' docker-compose.yml || \
-		(echo "docker-compose PostgreSQL image mismatch: expected postgres:$(POSTGRES_VERSION)"; exit 1)
-	@grep -q 'image: postgres:$(POSTGRES_VERSION)' .github/workflows/ci.yml || \
-		(echo "CI PostgreSQL image mismatch: expected postgres:$(POSTGRES_VERSION)"; exit 1)
 
 # ---------------------------------------------------------------------------
 # Dependencies
 # ---------------------------------------------------------------------------
 
-deps: version-check ## Install pinned local tools
+deps: ## Install pinned local tools
 	go install github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION)
 	go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@$(MIGRATE_VERSION)
 	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
@@ -66,11 +53,11 @@ db-up: ## Start PostgreSQL via Docker Compose
 db-down: ## Stop all Docker Compose services
 	docker compose down
 
-migrate-up: version-check ## Apply all migrations with pinned migrate
+migrate-up: ## Apply all migrations with pinned migrate
 	go run -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@$(MIGRATE_VERSION) \
 		-path $(MIGRATION_DIR) -database "$(DB_URL)" up
 
-migrate-down: version-check ## Rollback one migration with pinned migrate
+migrate-down: ## Rollback one migration with pinned migrate
 	go run -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@$(MIGRATE_VERSION) \
 		-path $(MIGRATION_DIR) -database "$(DB_URL)" down 1
 
@@ -78,22 +65,22 @@ migrate-down: version-check ## Rollback one migration with pinned migrate
 # Code generation
 # ---------------------------------------------------------------------------
 
-sqlc-gen: version-check ## Regenerate Go code from SQL queries with pinned sqlc
+sqlc-gen: ## Regenerate Go code from SQL queries with pinned sqlc
 	go run github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION) generate -f $(SQLC_CONFIG)
 
 # ---------------------------------------------------------------------------
 # Build & Run
 # ---------------------------------------------------------------------------
 
-build: version-check ## Build the API binary to bin/
+build: ## Build the API binary to bin/
 	@mkdir -p bin
 	go build -ldflags '$(LDFLAGS)' -o bin/$(APP_NAME) ./cmd/api
 	@echo "Built: bin/$(APP_NAME) ($(VERSION), $(COMMIT))"
 
-run: version-check ## Run API server locally
+run: ## Run API server locally
 	go run ./cmd/api
 
-docker-build: version-check ## Build production Docker image
+docker-build: ## Build production Docker image
 	docker build \
 		--build-arg GO_VERSION=$(GO_VERSION) \
 		--build-arg VERSION=$(VERSION) \
@@ -108,10 +95,10 @@ docker-build: version-check ## Build production Docker image
 # Quality
 # ---------------------------------------------------------------------------
 
-test: version-check ## Run all tests
+test: ## Run all tests
 	go test -v -count=1 ./...
 
-cover: version-check ## Run tests with coverage report
+cover: ## Run tests with coverage report
 	go test -coverprofile=coverage.out ./...
 	go tool cover -func=coverage.out | tail -1
 	@echo "Open HTML report: go tool cover -html=coverage.out"
@@ -119,15 +106,15 @@ cover: version-check ## Run tests with coverage report
 fmt: ## Format all Go files
 	gofmt -w $$(find . -name '*.go' -type f)
 
-lint: version-check ## Run pinned golangci-lint
+lint: ## Run pinned golangci-lint
 	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run
 
-vuln: version-check ## Check for known vulnerabilities
+vuln: ## Check for known vulnerabilities
 	go run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) ./...
 
-check: version-check fmt lint test vuln ## Run version-check + fmt + lint + test + vuln
+check: fmt lint test vuln ## Run fmt + lint + test + vuln
 
-tidy: version-check ## Tidy and verify go.mod
+tidy: ## Tidy and verify go.mod
 	go mod tidy
 	go mod verify
 

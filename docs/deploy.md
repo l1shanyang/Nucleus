@@ -6,18 +6,17 @@
 make docker-build
 ```
 
-`make docker-build` 会从 `versions.env` 读取 `GO_VERSION`，再通过 Docker build arg 传给 Dockerfile。产物：`nucleus-api:latest`（约 10MB，scratch 基础镜像）。
+`make docker-build` 会通过 Makefile 里的 `GO_VERSION` build arg 构建镜像。产物：`nucleus-api:latest`（约 10MB，scratch 基础镜像）。
 
 ## 工具版本
 
-工具版本统一维护在仓库根目录的 `versions.env`：
+工具版本维护在 Makefile 顶部：
 
 ```bash
 make versions
-make version-check
 ```
 
-CI、Makefile、Docker build 都应使用该文件里的版本，避免本地工具版本和 CI 版本不一致。
+本项目当前不依赖 GitHub CI；仓库重点是学习后端基础架构和脚手架搭建。关键开发工具通过 Makefile 固定版本即可。
 
 ## 环境变量
 
@@ -53,7 +52,7 @@ make db-up
 # 执行迁移
 make migrate-up
 
-# 启动服务（本地 Go 或 Docker）
+# 启动服务（本地 Go）
 make run
 ```
 
@@ -80,6 +79,6 @@ make migrate-down
 ## 质量门禁
 
 ```bash
-make check   # version-check + fmt + lint + test + vuln
+make check   # fmt + lint + test + vuln
 make cover   # 测试覆盖率报告
 ```

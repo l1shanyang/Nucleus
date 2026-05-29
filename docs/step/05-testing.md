@@ -155,4 +155,4 @@ go tool cover -html=coverage.out
 
 ## 五、下一步
 
-进入 [阶段六：生产化能力](06-production.md)，增加 Dockerfile、CI、structured logging。
+进入 [阶段六：生产化能力](06-production.md)，增加 Dockerfile、structured logging 和本地质量门禁。

@@ -16,11 +16,9 @@
 
 ### 前置条件
 
-- Go 1.26.3
+- Go 1.26.x
 - Docker / Docker Compose
 - sqlc / migrate / golangci-lint / govulncheck（`make deps` 可安装固定版本）
-
-项目工具版本统一维护在 `versions.env`。本地、CI、Docker 构建都应以该文件为准，避免使用本机已有工具或 `latest` 带来的版本漂移。
 
 ### 1. 初始化环境
 
@@ -64,13 +62,12 @@ curl "http://localhost:8080/api/v1/notes?limit=20&offset=0"
 ```bash
 make help           # 查看所有命令
 make versions       # 查看固定工具版本
-make version-check  # 检查本地和仓库声明的工具版本是否匹配
 make build          # 构建二进制到 bin/
 make run            # 本地运行
 make test           # 运行测试
 make fmt            # 格式化代码
 make lint           # 使用固定版本 golangci-lint 静态检查
-make check          # version-check + fmt + lint + test + vuln
+make check          # fmt + lint + test + vuln
 make tidy           # 整理 go.mod 依赖
 make clean          # 清理构建产物
 make deps           # 安装固定版本开发工具
@@ -120,17 +117,14 @@ docs/                     # 项目文档
 
 ## 工具版本
 
-`versions.env` 是工具链版本的单一来源：
+工具版本在 `Makefile` 顶部维护。这个项目不依赖 GitHub CI，版本管理保持轻量：Go 使用 `1.26.x`，代码生成、迁移、lint、安全扫描工具固定具体版本，避免关键工具漂移。
 
-| 变量 | 用途 |
-|------|------|
-| `GO_VERSION` | 本地检查、CI setup-go、Docker build arg |
-| `GOLANGCI_LINT_VERSION` | CI lint command、`make lint` |
-| `SQLC_VERSION` | `make sqlc-gen`、`make deps` |
-| `MIGRATE_VERSION` | `make migrate-up/down`、`make deps` |
-| `GOVULNCHECK_VERSION` | `make vuln`、CI vulnerability check |
-| `POSTGRES_VERSION` | 本地/CI PostgreSQL 版本约定 |
+```bash
+make versions
+```
+
+业务依赖版本由 `go.mod` / `go.sum` 管理；本地开发工具版本由 Makefile 管理。
 
 ## 文档
 
-项目推进方案详见 [docs/todo.md](docs/todo.md)，每阶段的讲解文档在 [docs/step/](docs/step/) 目录。
+项目约束详见 [docs/project-constraints.md](docs/project-constraints.md)，推进方案详见 [docs/todo.md](docs/todo.md)，每阶段的讲解文档在 [docs/step/](docs/step/) 目录。
