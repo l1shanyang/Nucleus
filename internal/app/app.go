@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -60,13 +60,13 @@ func New(ctx context.Context, cfg config.Config) (*App, error) {
 func (a *App) Run(ctx context.Context) error {
 	errCh := make(chan error, 1)
 	go func() {
-		log.Printf("server listening on :%s (%s)", a.cfg.HTTP.Port, a.cfg.App.Env)
+		slog.Info("server starting", "port", a.cfg.HTTP.Port, "env", a.cfg.App.Env)
 		errCh <- a.server.ListenAndServe()
 	}()
 
 	select {
 	case <-ctx.Done():
-		log.Println("shutdown signal received")
+		slog.Info("shutdown signal received")
 	case err := <-errCh:
 		if !errors.Is(err, http.ErrServerClosed) {
 			a.pool.Close()
@@ -81,12 +81,14 @@ func (a *App) shutdown() error {
 	ctx, cancel := context.WithTimeout(context.Background(), a.cfg.HTTP.ShutdownTimeout)
 	defer cancel()
 
+	slog.Info("shutting down server", "timeout", a.cfg.HTTP.ShutdownTimeout)
+
 	if err := a.server.Shutdown(ctx); err != nil {
 		a.pool.Close()
 		return fmt.Errorf("graceful shutdown: %w", err)
 	}
 
 	a.pool.Close()
-	log.Println("server stopped gracefully")
+	slog.Info("server stopped gracefully")
 	return nil
 }

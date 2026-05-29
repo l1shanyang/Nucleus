@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os/signal"
 	"syscall"
 
 	"nucleus/internal/app"
 	"nucleus/internal/config"
+	applog "nucleus/internal/log"
 )
 
 func main() {
@@ -16,15 +17,19 @@ func main() {
 
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("load config: %v", err)
+		slog.Error("load config failed", "error", err)
+		return
 	}
+
+	applog.Setup(cfg.App.Env, cfg.Log.Level)
 
 	a, err := app.New(ctx, cfg)
 	if err != nil {
-		log.Fatalf("init app: %v", err)
+		slog.Error("init app failed", "error", err)
+		return
 	}
 
 	if err := a.Run(ctx); err != nil {
-		log.Fatalf("run app: %v", err)
+		slog.Error("run app failed", "error", err)
 	}
 }
