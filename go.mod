@@ -1,6 +1,8 @@
 module nucleus
 
-go 1.23.0
+go 1.26.0
+
+toolchain go1.26.3
 
 require (
 	github.com/go-chi/chi/v5 v5.0.12

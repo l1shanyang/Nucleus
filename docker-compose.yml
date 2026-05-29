@@ -19,7 +19,7 @@ services:
       retries: 10
 
   migrate:
-    image: migrate/migrate:v4.19.0
+    image: migrate/migrate:v4.19.1
     profiles: ["tools"]
     depends_on:
       db:
@@ -28,7 +28,7 @@ services:
       - ./sql/migrations:/migrations:ro
 
   api:
-    image: golang:1.23
+    image: golang:1.26.3
     container_name: nucleus-api
     working_dir: /app
     depends_on:

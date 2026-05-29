@@ -16,10 +16,11 @@
 
 ### 前置条件
 
-- Go 1.23+
+- Go 1.26.3
 - Docker / Docker Compose
-- sqlc（`make deps` 可安装）
-- golangci-lint（可选，本地运行完整 lint 时需要；CI 会自动安装）
+- sqlc / migrate / golangci-lint / govulncheck（`make deps` 可安装固定版本）
+
+项目工具版本统一维护在 `versions.env`。本地、CI、Docker 构建都应以该文件为准，避免使用本机已有工具或 `latest` 带来的版本漂移。
 
 ### 1. 初始化环境
 
@@ -62,15 +63,17 @@ curl "http://localhost:8080/api/v1/notes?limit=20&offset=0"
 
 ```bash
 make help           # 查看所有命令
+make versions       # 查看固定工具版本
+make version-check  # 检查本地和仓库声明的工具版本是否匹配
 make build          # 构建二进制到 bin/
 make run            # 本地运行
 make test           # 运行测试
 make fmt            # 格式化代码
-make lint           # go vet 静态检查
-make check          # fmt + lint + test 完整质量门禁
+make lint           # 使用固定版本 golangci-lint 静态检查
+make check          # version-check + fmt + lint + test + vuln
 make tidy           # 整理 go.mod 依赖
 make clean          # 清理构建产物
-make deps           # 安装 sqlc / migrate
+make deps           # 安装固定版本开发工具
 make db-up          # 启动 PostgreSQL
 make db-down        # 停止所有容器
 make migrate-up     # 执行迁移
@@ -114,6 +117,19 @@ docs/                     # 项目文档
 | `DB_MIN_CONNS` | `1` | 数据库连接池最小连接数 |
 | `DB_MAX_IDLE_TIME` | `15m` | 数据库连接最大空闲时间 |
 | `LOG_LEVEL` | `info` | 日志级别 |
+
+## 工具版本
+
+`versions.env` 是工具链版本的单一来源：
+
+| 变量 | 用途 |
+|------|------|
+| `GO_VERSION` | 本地检查、CI setup-go、Docker build arg |
+| `GOLANGCI_LINT_VERSION` | CI lint action、`make lint` |
+| `SQLC_VERSION` | `make sqlc-gen`、`make deps` |
+| `MIGRATE_VERSION` | `make migrate-up/down`、`make deps` |
+| `GOVULNCHECK_VERSION` | `make vuln`、CI vulnerability check |
+| `POSTGRES_VERSION` | 本地/CI PostgreSQL 版本约定 |
 
 ## 文档
 

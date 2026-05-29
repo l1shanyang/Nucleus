@@ -6,7 +6,18 @@
 make docker-build
 ```
 
-产物：`nucleus-api:latest`（约 10MB，scratch 基础镜像）。
+`make docker-build` 会从 `versions.env` 读取 `GO_VERSION`，再通过 Docker build arg 传给 Dockerfile。产物：`nucleus-api:latest`（约 10MB，scratch 基础镜像）。
+
+## 工具版本
+
+工具版本统一维护在仓库根目录的 `versions.env`：
+
+```bash
+make versions
+make version-check
+```
+
+CI、Makefile、Docker build 都应使用该文件里的版本，避免本地工具版本和 CI 版本不一致。
 
 ## 环境变量
 
@@ -69,6 +80,6 @@ make migrate-down
 ## 质量门禁
 
 ```bash
-make check   # fmt + lint + test + vuln
+make check   # version-check + fmt + lint + test + vuln
 make cover   # 测试覆盖率报告
 ```

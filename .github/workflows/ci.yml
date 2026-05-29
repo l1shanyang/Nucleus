@@ -28,10 +28,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Load tool versions
+        id: versions
+        shell: bash
+        run: |
+          while IFS='=' read -r key value; do
+            [[ -z "$key" || "$key" == \#* ]] && continue
+            echo "$key=$value" >> "$GITHUB_OUTPUT"
+          done < versions.env
+
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.26"
+          go-version: ${{ steps.versions.outputs.GO_VERSION }}
           cache: true
+
+      - name: Version check
+        run: make version-check
 
       - name: Format
         run: |
@@ -49,19 +61,28 @@ jobs:
         run: go build -o /dev/null ./cmd/api
 
       - name: Vulnerability check
-        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+        run: go run golang.org/x/vuln/cmd/govulncheck@${{ steps.versions.outputs.GOVULNCHECK_VERSION }} ./...
 
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      - name: Load tool versions
+        id: versions
+        shell: bash
+        run: |
+          while IFS='=' read -r key value; do
+            [[ -z "$key" || "$key" == \#* ]] && continue
+            echo "$key=$value" >> "$GITHUB_OUTPUT"
+          done < versions.env
+
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.26"
+          go-version: ${{ steps.versions.outputs.GO_VERSION }}
           cache: true
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: latest
+          version: ${{ steps.versions.outputs.GOLANGCI_LINT_VERSION }}

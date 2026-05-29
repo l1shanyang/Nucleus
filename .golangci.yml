@@ -1,5 +1,3 @@
-version: "2"
-
 run:
   timeout: 5m
 
@@ -10,30 +8,24 @@ linters:
     - staticcheck
     - unused
     - ineffassign
+    - gosimple
     - gocritic
-    - misspell
-
-  settings:
-    gocritic:
-      enabled-tags:
-        - diagnostic
-        - style
-        - performance
-
-formatters:
-  enable:
     - gofmt
     - goimports
+    - misspell
 
-  settings:
-    goimports:
-      local-prefixes: nucleus
+linters-settings:
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
 
-  exclusions:
-    generated: lax
+  goimports:
+    local-prefixes: nucleus
 
-exclusions:
-  paths:
+issues:
+  exclude-dirs:
     - vendor
     - internal/db/sqlc
   max-issues-per-linter: 50
