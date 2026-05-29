@@ -22,7 +22,7 @@ func NewPool(ctx context.Context, cfg config.DatabaseConfig) (*Pool, error) {
 	}
 
 	poolCfg.MaxConns = int32(cfg.MaxOpenConns)
-	poolCfg.MinConns = int32(cfg.MaxIdleConns)
+	poolCfg.MinConns = int32(cfg.MinConns)
 	poolCfg.MaxConnIdleTime = cfg.MaxIdleTime
 	poolCfg.HealthCheckPeriod = 30 * time.Second
 

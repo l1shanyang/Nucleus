@@ -37,7 +37,9 @@ services:
     environment:
       APP_ENV: local
       HTTP_PORT: "8080"
+      CORS_ALLOWED_ORIGINS: "*"
       DATABASE_URL: postgres://nucleus:nucleus@db:5432/nucleus?sslmode=disable
+      DB_MIN_CONNS: "1"
     command: sh -c "go run ./cmd/api"
     ports:
       - "8080:8080"

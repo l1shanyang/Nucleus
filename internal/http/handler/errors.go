@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 )
@@ -38,7 +39,8 @@ func Internal(msg string) *AppError {
 func WrapHandler(fn func(http.ResponseWriter, *http.Request) error) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := fn(w, r); err != nil {
-			if appErr, ok := err.(*AppError); ok {
+			var appErr *AppError
+			if errors.As(err, &appErr) {
 				WriteError(w, appErr.Status, appErr.Code, appErr.Message)
 			} else {
 				// 非 AppError 统一返回 500，不暴露内部信息

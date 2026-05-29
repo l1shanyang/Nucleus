@@ -11,7 +11,11 @@ import (
 	"nucleus/internal/http/middleware"
 )
 
-func New(healthHandler *handler.HealthHandler, noteHandler *handler.NoteHandler) http.Handler {
+type Options struct {
+	CORSAllowedOrigins []string
+}
+
+func New(healthHandler *handler.HealthHandler, noteHandler *handler.NoteHandler, opts Options) http.Handler {
 	r := chi.NewRouter()
 
 	// 全局中间件
@@ -20,7 +24,7 @@ func New(healthHandler *handler.HealthHandler, noteHandler *handler.NoteHandler)
 	r.Use(chimw.Recoverer)
 	r.Use(chimw.Timeout(30 * time.Second))
 	r.Use(middleware.SecurityHeaders)
-	r.Use(middleware.CORS("*"))
+	r.Use(middleware.CORS(opts.CORSAllowedOrigins...))
 
 	// 运维端点
 	r.Get("/healthz", healthHandler.Live)

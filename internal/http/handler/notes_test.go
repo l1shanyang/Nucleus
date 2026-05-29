@@ -3,6 +3,8 @@ package handler_test
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -111,6 +113,46 @@ func TestNoteHandler_Create_Success(t *testing.T) {
 	}
 	if data["title"] != "Hello" {
 		t.Errorf("title = %v, want Hello", data["title"])
+	}
+}
+
+func TestNoteHandler_Create_StoreError(t *testing.T) {
+	h, mock := setupNoteHandler()
+	mock.CreateErr = errors.New("database is unavailable")
+
+	body := `{"title":"Hello","body":"World"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/notes", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	handler.WrapHandler(h.Create)(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusInternalServerError)
+	}
+
+	var resp handler.ErrorResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
+	if resp.Error.Code != "INTERNAL" {
+		t.Errorf("error code = %q, want INTERNAL", resp.Error.Code)
+	}
+	if resp.Error.Message == mock.CreateErr.Error() {
+		t.Errorf("internal error leaked to response: %q", resp.Error.Message)
+	}
+}
+
+func TestWrapHandler_WrappedAppError(t *testing.T) {
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+
+	handler.WrapHandler(func(http.ResponseWriter, *http.Request) error {
+		return fmt.Errorf("wrapped: %w", handler.NotFound("missing"))
+	})(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusNotFound)
 	}
 }
 

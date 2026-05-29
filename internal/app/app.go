@@ -43,7 +43,7 @@ func New(ctx context.Context, cfg config.Config) (*App, error) {
 
 	server := &http.Server{
 		Addr:              ":" + cfg.HTTP.Port,
-		Handler:           router.New(healthHandler, noteHandler),
+		Handler:           router.New(healthHandler, noteHandler, router.Options{CORSAllowedOrigins: cfg.HTTP.CORSOrigins}),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       cfg.HTTP.ReadTimeout,
 		WriteTimeout:      cfg.HTTP.WriteTimeout,

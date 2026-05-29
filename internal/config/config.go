@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -28,12 +29,13 @@ type HTTPConfig struct {
 	WriteTimeout    time.Duration
 	IdleTimeout     time.Duration
 	ShutdownTimeout time.Duration
+	CORSOrigins     []string
 }
 
 type DatabaseConfig struct {
 	URL          string
 	MaxOpenConns int
-	MaxIdleConns int
+	MinConns     int
 	MaxIdleTime  time.Duration
 }
 
@@ -52,11 +54,12 @@ func Load() (Config, error) {
 			WriteTimeout:    getDuration("HTTP_WRITE_TIMEOUT", 15*time.Second),
 			IdleTimeout:     getDuration("HTTP_IDLE_TIMEOUT", 60*time.Second),
 			ShutdownTimeout: getDuration("HTTP_SHUTDOWN_TIMEOUT", 10*time.Second),
+			CORSOrigins:     getCSV("CORS_ALLOWED_ORIGINS", []string{"*"}),
 		},
 		Database: DatabaseConfig{
 			URL:          os.Getenv("DATABASE_URL"),
 			MaxOpenConns: getInt("DB_MAX_OPEN_CONNS", 10),
-			MaxIdleConns: getInt("DB_MAX_IDLE_CONNS", 5),
+			MinConns:     getInt("DB_MIN_CONNS", 1),
 			MaxIdleTime:  getDuration("DB_MAX_IDLE_TIME", 15*time.Minute),
 		},
 		Log: LogConfig{
@@ -116,4 +119,24 @@ func getDuration(key string, fallback time.Duration) time.Duration {
 		}
 	}
 	return fallback
+}
+
+func getCSV(key string, fallback []string) []string {
+	v := os.Getenv(key)
+	if strings.TrimSpace(v) == "" {
+		return fallback
+	}
+
+	parts := strings.Split(v, ",")
+	values := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			values = append(values, part)
+		}
+	}
+	if len(values) == 0 {
+		return fallback
+	}
+	return values
 }

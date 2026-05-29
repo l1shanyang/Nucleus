@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -32,7 +33,11 @@ func (h *NoteHandler) Create(w http.ResponseWriter, r *http.Request) error {
 		Body:  req.Body,
 	})
 	if err != nil {
-		return BadRequest(err.Error())
+		var validationErr *service.ValidationError
+		if errors.As(err, &validationErr) {
+			return BadRequest(validationErr.Message)
+		}
+		return Internal("failed to create note")
 	}
 
 	WriteSuccess(w, http.StatusCreated, note)

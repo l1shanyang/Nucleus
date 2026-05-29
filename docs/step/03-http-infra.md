@@ -132,10 +132,10 @@ Require(map[string]string{"title": req.Title, "body": req.Body})
 跨域请求时，浏览器会先发一个 OPTIONS 预检请求。CORS 中间件处理这个请求，告诉浏览器"这个来源是允许的"。
 
 ```go
-r.Use(middleware.CORS("*"))  // 开发阶段允许所有来源
+r.Use(middleware.CORS(cfg.HTTP.CORSOrigins...))  // 从配置读取允许来源
 ```
 
-生产环境应该指定具体来源，如 `middleware.CORS("https://app.example.com")`。
+本地可以配置为 `*`，生产环境应该通过 `CORS_ALLOWED_ORIGINS=https://app.example.com` 指定具体来源。
 
 **安全头中间件：**
 
@@ -155,7 +155,7 @@ r.Use(chimw.RealIP)
 r.Use(chimw.Recoverer)
 r.Use(chimw.Timeout(30 * time.Second))
 r.Use(middleware.SecurityHeaders)
-r.Use(middleware.CORS("*"))
+r.Use(middleware.CORS(cfg.HTTP.CORSOrigins...))
 
 // 运维端点
 r.Get("/healthz", healthHandler.Live)

@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"nucleus/internal/store"
@@ -29,13 +28,13 @@ func (s *NoteService) Create(ctx context.Context, input CreateInput) (store.Note
 	input.Body = strings.TrimSpace(input.Body)
 
 	if input.Title == "" {
-		return store.Note{}, fmt.Errorf("title is required")
+		return store.Note{}, validationError("title is required")
 	}
 	if input.Body == "" {
-		return store.Note{}, fmt.Errorf("body is required")
+		return store.Note{}, validationError("body is required")
 	}
 	if len(input.Title) > 200 {
-		return store.Note{}, fmt.Errorf("title must be at most 200 characters")
+		return store.Note{}, validationError("title must be at most 200 characters")
 	}
 
 	return s.store.Create(ctx, input.Title, input.Body)

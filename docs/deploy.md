@@ -14,9 +14,11 @@ make docker-build
 |------|------|--------|------|
 | `APP_ENV` | 否 | `local` | 运行环境：local / test / production |
 | `HTTP_PORT` | 否 | `8080` | 监听端口 |
+| `CORS_ALLOWED_ORIGINS` | 否 | `*` | 允许的跨域来源，多个来源用逗号分隔 |
 | `DATABASE_URL` | **是** | — | PostgreSQL 连接串 |
 | `DB_MAX_OPEN_CONNS` | 否 | `10` | 最大打开连接数 |
-| `DB_MAX_IDLE_CONNS` | 否 | `5` | 最大空闲连接数 |
+| `DB_MIN_CONNS` | 否 | `1` | 最小连接数 |
+| `DB_MAX_IDLE_TIME` | 否 | `15m` | 最大空闲时间 |
 | `LOG_LEVEL` | 否 | `info` | 日志级别：debug / info / warn / error |
 
 ## Docker 运行
@@ -26,6 +28,7 @@ docker run -d \
   --name nucleus-api \
   -p 8080:8080 \
   -e APP_ENV=production \
+  -e CORS_ALLOWED_ORIGINS=https://app.example.com \
   -e DATABASE_URL=postgres://user:pass@db:5432/nucleus?sslmode=disable \
   nucleus-api:latest
 ```

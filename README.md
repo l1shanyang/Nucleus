@@ -19,6 +19,7 @@
 - Go 1.23+
 - Docker / Docker Compose
 - sqlc（`make deps` 可安装）
+- golangci-lint（可选，本地运行完整 lint 时需要；CI 会自动安装）
 
 ### 1. 初始化环境
 
@@ -69,7 +70,7 @@ make lint           # go vet 静态检查
 make check          # fmt + lint + test 完整质量门禁
 make tidy           # 整理 go.mod 依赖
 make clean          # 清理构建产物
-make deps           # 安装开发工具
+make deps           # 安装 sqlc / migrate
 make db-up          # 启动 PostgreSQL
 make db-down        # 停止所有容器
 make migrate-up     # 执行迁移
@@ -82,11 +83,16 @@ make sqlc-gen       # 重新生成 sqlc 代码
 ```
 cmd/api/                  # 程序入口
 internal/
+  app/                    # 应用装配与生命周期
   config/                 # 配置加载
+  log/                    # 结构化日志
   version/                # 构建版本信息
   db/                     # 数据库连接池
   db/sqlc/                # sqlc 生成的查询代码
+  service/                # 业务逻辑层
+  store/                  # 数据访问层
   http/handler/           # HTTP 处理器
+  http/middleware/        # HTTP 中间件
   http/router/            # 路由定义
 sql/
   migrations/             # 数据库迁移文件
@@ -102,7 +108,12 @@ docs/                     # 项目文档
 |------|--------|------|
 | `APP_ENV` | `local` | 运行环境 |
 | `HTTP_PORT` | `8080` | 监听端口 |
+| `CORS_ALLOWED_ORIGINS` | `*` | 允许的跨域来源，多个来源用逗号分隔 |
 | `DATABASE_URL` | (必填) | PostgreSQL 连接串 |
+| `DB_MAX_OPEN_CONNS` | `10` | 数据库连接池最大连接数 |
+| `DB_MIN_CONNS` | `1` | 数据库连接池最小连接数 |
+| `DB_MAX_IDLE_TIME` | `15m` | 数据库连接最大空闲时间 |
+| `LOG_LEVEL` | `info` | 日志级别 |
 
 ## 文档
 
