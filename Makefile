@@ -15,7 +15,7 @@ LDFLAGS     := -s -w \
 	-X $(MODULE)/internal/version.BuildTime=$(BUILD_TIME)
 
 .PHONY: help deps db-up db-down migrate-up migrate-down sqlc-gen \
-	run build test cover fmt lint check tidy clean
+	run build docker-build test cover fmt lint check tidy clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -81,6 +81,16 @@ run: ## Run API server locally (or via Docker if Go not found)
 		echo "Local Go not found, using docker compose api service"; \
 		docker compose up api; \
 	fi
+
+docker-build: ## Build production Docker image
+	docker build \
+		--build-arg VERSION=$(VERSION) \
+		--build-arg COMMIT=$(COMMIT) \
+		--build-arg BUILD_TIME=$(BUILD_TIME) \
+		-t $(APP_NAME):$(VERSION) \
+		-t $(APP_NAME):latest \
+		.
+	@echo "Built image: $(APP_NAME):$(VERSION)"
 
 # ---------------------------------------------------------------------------
 # Quality
