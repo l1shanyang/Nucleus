@@ -1,136 +1,229 @@
-可以把这个脚手架改造拆成 **6 个阶段**。每个阶段都有明确目标，完成后项目能力会自然上一个台阶。
+# Nucleus Todo
 
-**阶段一：工程化基础**
+本项目是学习型 Go 后端原子脚手架。目标不是追求完整生产平台，而是在保持简洁的前提下，逐步补齐所有业务都会复用的后端基础设施。
 
-目标：让项目像一个标准开源后端项目，而不是临时 demo。
+项目约束详见 [project-constraints.md](project-constraints.md)。
 
-主要包括：
+## 当前状态
 
-- 补齐 `.gitignore`、`.dockerignore`、`.editorconfig`
-- 整理 README 和基础 docs
-- 增强 Makefile
-- 统一本地启动、测试、格式化、构建命令
-- 加入基础 lint / format / vet 规范
+已具备：
 
-完成后你会熟悉：
+- 工程命令：`Makefile`
+- 配置加载：`internal/config`
+- 应用装配和生命周期：`internal/app`
+- HTTP 路由、中间件、统一响应：`internal/http`
+- 基础错误处理：`AppError`、`ValidationError`
+- 分层调用链：`handler -> service -> store -> sqlc/db`
+- 数据库连接池和迁移：`internal/db`、`sql/migrations`
+- sqlc 查询生成：`sql/queries`、`internal/db/sqlc`
+- 本地质量门禁：`make check`
+- 文档约束：`docs/project-constraints.md`
 
-- Go 项目的基础目录习惯
-- 后端项目常见开发命令
-- 本地环境、Docker、数据库之间的关系
+## 推进原则
 
-**阶段二：应用启动与配置体系**
+- 每次只推进一个基础设施主题。
+- 每个主题都要解释它解决什么后端通用问题。
+- 不提前引入 GitHub CI、Kubernetes、复杂监控、队列、缓存、多租户等重型能力。
+- 业务模块出现真实需求后再抽象，不为了“成熟感”提前复杂化。
 
-目标：把项目从“能跑”升级成“可管理、可配置、可部署”。
+## 后续顺序
 
-主要包括：
+### 1. Request Log + Request ID
 
-- 扩展 config
-- 区分 local / test / production 环境
-- 抽出 app 启动层
-- 管理 HTTP server、DB pool、logger 等依赖
-- 完善 graceful shutdown
-- 预留后续 Redis、队列、对象存储等依赖装配位置
+目标：让每个 HTTP 请求都可追踪、可排查。
 
-完成后你会熟悉：
+计划：
 
-- 后端服务启动流程
-- 环境变量如何驱动服务行为
-- 后端应用生命周期
-- `context`、信号监听、优雅关闭
+- 增加请求日志中间件。
+- 记录 `request_id`、`method`、`path`、`status`、`latency`、`remote_ip`、`user_agent`。
+- 将 `X-Request-ID` 回写到响应 header。
+- 错误响应可关联 request id。
 
-**阶段三：HTTP 基础设施**
+学习重点：
 
-目标：建立所有业务都能复用的 API 层规范。
+- middleware 在后端请求链路中的位置。
+- request id 如何串联前端报错、后端日志和服务端排查。
+- 为什么日志应该结构化，而不是字符串拼接。
 
-主要包括：
+验收：
 
-- 统一 response 格式
-- 统一 error 格式
-- 封装 request parser
-- 增加 validator
-- 拆分 middleware
-- 加入 request id、CORS、body limit、recovery、security headers
-- 明确 `/healthz`、`/readyz`、`/api/v1` 等路由边界
+- 请求结束后有结构化访问日志。
+- 响应 header 包含 `X-Request-ID`。
+- 测试覆盖 request id 和日志中间件的关键行为。
 
-完成后你会熟悉：
+### 2. 错误体系下沉
 
-- handler 的职责边界
-- middleware 类似前端 interceptor 的作用
-- API 错误如何让前端更好处理
-- 请求校验、响应格式、错误码这些后端通用约定
+目标：让业务错误和 HTTP 协议错误解耦。
 
-**阶段四：架构分层与数据库基础**
+计划：
 
-目标：从简单 CRUD 骨架升级成可扩展后端架构。
+- 扩展 service 层通用错误类型。
+- 支持 `ValidationError`、`NotFoundError`、`ConflictError`、`UnauthorizedError`、`ForbiddenError`、`InternalError`。
+- HTTP 层统一把 service 错误映射成状态码和错误响应。
+- 避免 handler 直接判断所有业务错误细节。
 
-主要包括：
+学习重点：
 
-- 引入 service 层
-- 引入 store/repository 层
-- 保留 sqlc 作为底层 SQL 生成工具
-- 避免 handler 直接依赖数据库生成代码
-- 增加事务管理能力
-- 完善数据库连接池配置
-- 规范 migration 和 SQL 查询组织
-- 增加 ready check
+- 为什么 service 层不应该依赖 HTTP。
+- 业务错误、系统错误、协议错误的区别。
+- 如何避免内部错误泄露给客户端。
 
-完成后你会熟悉：
+验收：
 
-- handler / service / store 各自负责什么
-- SQL、migration、sqlc 的协作方式
-- 数据库事务边界如何设计
-- 后端如何避免业务逻辑散落在 HTTP 层
+- handler 中不再手写大量错误状态判断。
+- service 返回的通用错误可以被 HTTP 层稳定映射。
+- 包装后的错误仍可通过 `errors.As` 正确识别。
 
-**阶段五：测试与文档化**
+### 3. Request Helper + Pagination
 
-目标：让脚手架具备长期维护和多人协作基础。
+目标：沉淀所有 handler 都会复用的请求解析能力。
 
-主要包括：
+计划：
 
-- 建立单元测试结构
-- 建立 handler 测试
-- 建立 store 集成测试
-- 增加测试数据库策略
-- 生成 coverage
-- 补充 API 文档或 OpenAPI
-- 形成开发、测试、数据库、部署文档
+- 增加通用 query 参数解析。
+- 增加分页参数结构。
+- 统一 `limit`、`offset` 默认值和最大值。
+- 明确列表响应 `meta` 结构。
 
-完成后你会熟悉：
+学习重点：
 
-- Go 后端如何写测试
-- 如何测试 HTTP 接口
-- 如何测试数据库访问
-- 如何保证后续业务迭代不破坏底层能力
+- handler 如何保持“薄”。
+- 为什么请求解析不应该散落在每个业务 handler 中。
+- API 分页规范如何影响前后端协作。
 
-**阶段六：生产化能力**
+验收：
 
-目标：让项目具备真实部署和线上运行的基础条件。
+- `NoteHandler.List` 使用通用分页 helper。
+- 列表响应元数据结构稳定。
+- 参数解析测试覆盖默认值、非法值、边界值。
 
-主要包括：
+### 4. TxManager
 
-- 增加生产 Dockerfile
-- 建立本地质量门禁
-- 加入 build info
-- 加入 structured logging 生产配置
-- 加入 metrics / tracing 的基础预留
-- 增加依赖漏洞检查
-- 明确 migration 发布策略
-- 编写部署说明
+目标：为多表写入准备统一事务边界。
 
-完成后你会熟悉：
+计划：
 
-- Go 服务如何构建成生产镜像
-- 本地质量门禁如何保护代码质量
-- 后端服务上线前需要检查什么
-- 日志、指标、健康检查如何支撑线上排查
+- 在 db/store 层增加轻量事务管理器。
+- 提供 `WithTx(ctx, fn)` 风格接口。
+- 确保 commit / rollback 逻辑集中管理。
+- 保持当前单表 CRUD 简洁，不强行复杂化。
 
-推荐执行顺序就是：
+学习重点：
 
-```text
-1. 工程化基础
-2. 应用启动与配置体系
-3. HTTP 基础设施
-4. 架构分层与数据库基础
-5. 测试与文档化
-6. 生产化能力
-```
+- 什么场景需要事务。
+- 为什么事务边界通常由 service 控制。
+- 如何让多个 store 共用同一个事务。
+
+验收：
+
+- 有统一事务入口。
+- 有事务成功提交和失败回滚测试。
+- 后续业务 service 可以自然接入事务。
+
+### 5. 数据库错误映射
+
+目标：隔离 pgx/PostgreSQL 底层错误，向 service 暴露稳定错误语义。
+
+计划：
+
+- 映射 `pgx.ErrNoRows`。
+- 映射 PostgreSQL 唯一约束冲突。
+- 映射外键约束冲突。
+- 保留原始错误用于日志排查。
+
+学习重点：
+
+- 数据库约束如何转成业务语义。
+- 为什么不能把底层数据库错误直接返回给客户端。
+- store 层在错误隔离中的职责。
+
+验收：
+
+- store 层返回稳定业务错误。
+- handler 不感知 pgx / pgconn 细节。
+- 测试覆盖常见数据库错误映射。
+
+### 6. Store 集成测试基础
+
+目标：打通真实 PostgreSQL 下的数据库测试能力。
+
+计划：
+
+- 增加 `internal/db/dbtest` 或等价测试 helper。
+- 使用测试数据库跑 migration。
+- 为 `NoteStore` 增加真实数据库集成测试。
+- 明确本地执行方式。
+
+学习重点：
+
+- 单元测试和集成测试的区别。
+- migration、sqlc、pgx 在测试中的协作方式。
+- 如何清理测试数据。
+
+验收：
+
+- 可以本地运行 store 集成测试。
+- 测试使用真实 PostgreSQL。
+- 不影响普通 `make test` 的轻量体验，必要时单独命令运行。
+
+### 7. OpenAPI 维护规范
+
+目标：让 API 文档成为前后端协作契约。
+
+计划：
+
+- 规范新增接口时如何更新 `docs/api/openapi.yaml`。
+- 统一错误响应引用。
+- 统一分页响应 schema。
+- 在 README 或 docs 中说明维护规则。
+
+学习重点：
+
+- OpenAPI 在前后端协作中的作用。
+- 为什么接口文档应该和代码一起演进。
+- 手写 OpenAPI 的边界和成本。
+
+验收：
+
+- 当前 notes 接口文档和实际响应一致。
+- 错误和分页 schema 可复用。
+- 有简短维护说明。
+
+### 8. Version Endpoint
+
+目标：暴露构建信息，理解 Go 二进制构建参数。
+
+计划：
+
+- 增加 `GET /version`。
+- 返回 `version`、`commit`、`build_time`、`go_version`。
+- 复用已有 `internal/version`。
+
+学习重点：
+
+- `-ldflags` 如何向 Go 二进制注入构建信息。
+- 如何确认当前运行的是哪个构建版本。
+- 运维端点和业务 API 的边界。
+
+验收：
+
+- `/version` 返回构建信息。
+- OpenAPI 同步更新。
+- 有 handler 测试。
+
+## 暂不推进
+
+以下能力暂时不作为当前脚手架目标：
+
+- GitHub CI
+- Kubernetes
+- Prometheus metrics
+- OpenTelemetry tracing
+- Redis cache
+- 消息队列
+- 多租户
+- 认证权限系统
+- 后台管理
+- 复杂代码生成框架
+
+这些能力不是不重要，而是等真实业务需要时再引入。
