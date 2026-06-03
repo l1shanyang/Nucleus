@@ -193,11 +193,14 @@ func TestNoteHandler_List(t *testing.T) {
 		query      string
 		wantStatus int
 		wantCount  int
+		wantMeta   handler.Pagination
+		wantCode   string
 	}{
-		{"默认", "", http.StatusOK, 3},
-		{"limit=1", "?limit=1", http.StatusOK, 1},
-		{"offset=2", "?offset=2", http.StatusOK, 1},
-		{"无效 limit", "?limit=abc", http.StatusBadRequest, 0},
+		{"默认", "", http.StatusOK, 3, handler.Pagination{Limit: 20, Offset: 0}, ""},
+		{"limit=1", "?limit=1", http.StatusOK, 1, handler.Pagination{Limit: 1, Offset: 0}, ""},
+		{"offset=2", "?offset=2", http.StatusOK, 1, handler.Pagination{Limit: 20, Offset: 2}, ""},
+		{"limit 超过最大值", "?limit=500", http.StatusOK, 3, handler.Pagination{Limit: 100, Offset: 0}, ""},
+		{"无效 limit", "?limit=abc", http.StatusBadRequest, 0, handler.Pagination{}, "INVALID_PARAM"},
 	}
 
 	for _, tt := range tests {
@@ -222,6 +225,19 @@ func TestNoteHandler_List(t *testing.T) {
 				}
 				if len(data) != tt.wantCount {
 					t.Errorf("got %d items, want %d", len(data), tt.wantCount)
+				}
+				if resp.Meta != tt.wantMeta {
+					t.Errorf("meta = %+v, want %+v", resp.Meta, tt.wantMeta)
+				}
+			}
+
+			if tt.wantCode != "" {
+				var resp handler.ErrorResponse
+				if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+					t.Fatalf("failed to parse response: %v", err)
+				}
+				if resp.Error.Code != tt.wantCode {
+					t.Errorf("error code = %q, want %q", resp.Error.Code, tt.wantCode)
 				}
 			}
 		})

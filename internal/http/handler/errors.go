@@ -25,6 +25,10 @@ func BadRequest(msg string) *AppError {
 	return &AppError{Status: http.StatusBadRequest, Code: "BAD_REQUEST", Message: msg}
 }
 
+func InvalidParam(msg string) *AppError {
+	return &AppError{Status: http.StatusBadRequest, Code: "INVALID_PARAM", Message: msg}
+}
+
 func NotFound(msg string) *AppError {
 	return &AppError{Status: http.StatusNotFound, Code: "NOT_FOUND", Message: msg}
 }

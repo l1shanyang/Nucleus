@@ -88,7 +88,7 @@
 - HTTP `WrapHandler` 统一把 `apperror.Error` 映射为状态码和错误响应。
 - handler 不再识别 service 私有错误类型，只负责调用 service 和写成功响应。
 
-### 3. Request Helper + Pagination
+### 3. Request Helper + Pagination（已完成）
 
 目标：沉淀所有 handler 都会复用的请求解析能力。
 
@@ -110,6 +110,13 @@
 - `NoteHandler.List` 使用通用分页 helper。
 - 列表响应元数据结构稳定。
 - 参数解析测试覆盖默认值、非法值、边界值。
+
+实现：
+
+- 新增 `handler.Pagination`、`QueryInt`、`ParsePagination`。
+- 统一列表接口默认 `limit=20`、`offset=0`、最大 `limit=100`。
+- `NoteHandler.List` 不再手写 query 参数解析。
+- `ListResponse.Meta` 使用固定分页结构，不再使用临时 map。
 
 ### 4. TxManager
 

@@ -12,8 +12,8 @@ type SuccessResponse struct {
 
 // ListResponse 列表响应，带分页元数据。
 type ListResponse struct {
-	Data any            `json:"data"`
-	Meta map[string]any `json:"meta,omitempty"`
+	Data any        `json:"data"`
+	Meta Pagination `json:"meta"`
 }
 
 // ErrorBody 错误响应体。
@@ -42,8 +42,8 @@ func WriteSuccess(w http.ResponseWriter, status int, data any) {
 }
 
 // WriteList 写入列表响应。
-func WriteList(w http.ResponseWriter, data any, meta map[string]any) {
-	writeJSON(w, http.StatusOK, ListResponse{Data: data, Meta: meta})
+func WriteList(w http.ResponseWriter, data any, pagination Pagination) {
+	writeJSON(w, http.StatusOK, ListResponse{Data: data, Meta: pagination})
 }
 
 // WriteError 写入业务错误响应。
