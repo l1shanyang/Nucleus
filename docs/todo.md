@@ -28,7 +28,7 @@
 
 ## 后续顺序
 
-### 1. Request Log + Request ID
+### 1. Request Log + Request ID（已完成）
 
 目标：让每个 HTTP 请求都可追踪、可排查。
 
@@ -50,6 +50,13 @@
 - 请求结束后有结构化访问日志。
 - 响应 header 包含 `X-Request-ID`。
 - 测试覆盖 request id 和日志中间件的关键行为。
+
+实现：
+
+- 新增 `internal/http/middleware.RequestLog`。
+- 复用 chi `RequestID` 生成和读取 request id。
+- 在 router 全局中间件链路中接入请求日志。
+- 增加 request id header、访问日志字段、默认 200 状态码测试。
 
 ### 2. 错误体系下沉
 

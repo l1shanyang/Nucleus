@@ -21,6 +21,7 @@ func New(healthHandler *handler.HealthHandler, noteHandler *handler.NoteHandler,
 	// 全局中间件
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
+	r.Use(middleware.RequestLog)
 	r.Use(chimw.Recoverer)
 	r.Use(chimw.Timeout(30 * time.Second))
 	r.Use(middleware.SecurityHeaders)
