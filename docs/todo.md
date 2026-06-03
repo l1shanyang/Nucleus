@@ -58,7 +58,7 @@
 - 在 router 全局中间件链路中接入请求日志。
 - 增加 request id header、访问日志字段、默认 200 状态码测试。
 
-### 2. 错误体系下沉
+### 2. 错误体系下沉（已完成）
 
 目标：让业务错误和 HTTP 协议错误解耦。
 
@@ -80,6 +80,13 @@
 - handler 中不再手写大量错误状态判断。
 - service 返回的通用错误可以被 HTTP 层稳定映射。
 - 包装后的错误仍可通过 `errors.As` 正确识别。
+
+实现：
+
+- 新增 `internal/apperror`，表达与 HTTP 无关的业务错误语义。
+- service 层返回 `apperror.Validation`、`apperror.Internal` 等通用错误。
+- HTTP `WrapHandler` 统一把 `apperror.Error` 映射为状态码和错误响应。
+- handler 不再识别 service 私有错误类型，只负责调用 service 和写成功响应。
 
 ### 3. Request Helper + Pagination
 

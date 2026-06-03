@@ -2,9 +2,11 @@ package service_test
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
+	"nucleus/internal/apperror"
 	"nucleus/internal/service"
 	"nucleus/internal/store/storetest"
 )
@@ -63,8 +65,15 @@ func TestNoteService_Create(t *testing.T) {
 				if err == nil {
 					t.Fatalf("expected error %q, got nil", tt.wantErr)
 				}
-				if err.Error() != tt.wantErr {
-					t.Fatalf("expected error %q, got %q", tt.wantErr, err.Error())
+				var appErr *apperror.Error
+				if !errors.As(err, &appErr) {
+					t.Fatalf("expected apperror.Error, got %T", err)
+				}
+				if appErr.Kind != apperror.KindValidation {
+					t.Fatalf("kind = %q, want %q", appErr.Kind, apperror.KindValidation)
+				}
+				if appErr.Message != tt.wantErr {
+					t.Fatalf("message = %q, want %q", appErr.Message, tt.wantErr)
 				}
 				return
 			}
@@ -93,6 +102,16 @@ func TestNoteService_Create_StoreError(t *testing.T) {
 	_, err := svc.Create(context.Background(), service.CreateInput{Title: "Test", Body: "Content"})
 	if err == nil {
 		t.Fatal("expected error, got nil")
+	}
+	var appErr *apperror.Error
+	if !errors.As(err, &appErr) {
+		t.Fatalf("expected apperror.Error, got %T", err)
+	}
+	if appErr.Kind != apperror.KindInternal {
+		t.Fatalf("kind = %q, want %q", appErr.Kind, apperror.KindInternal)
+	}
+	if !errors.Is(err, mock.CreateErr) {
+		t.Fatal("expected service error to wrap store error")
 	}
 }
 

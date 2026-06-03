@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+
+	"nucleus/internal/apperror"
 )
 
-// AppError 业务错误，包含 HTTP 状态码和错误码。
+// AppError 表示 HTTP 层可以直接转换为响应的错误。
 type AppError struct {
 	Status  int    `json:"-"`
 	Code    string `json:"code"`
@@ -42,10 +44,44 @@ func WrapHandler(fn func(http.ResponseWriter, *http.Request) error) http.Handler
 			var appErr *AppError
 			if errors.As(err, &appErr) {
 				WriteError(w, appErr.Status, appErr.Code, appErr.Message)
-			} else {
-				// 非 AppError 统一返回 500，不暴露内部信息
-				WriteError(w, http.StatusInternalServerError, "INTERNAL", "internal server error")
+				return
 			}
+
+			var serviceErr *apperror.Error
+			if errors.As(err, &serviceErr) {
+				status, code, message := mapAppError(serviceErr)
+				WriteError(w, status, code, message)
+				return
+			}
+
+			// 非预期错误统一返回 500，不暴露内部信息
+			WriteError(w, http.StatusInternalServerError, "INTERNAL", "internal server error")
 		}
 	}
+}
+
+func mapAppError(err *apperror.Error) (status int, code, message string) {
+	switch err.Kind {
+	case apperror.KindValidation:
+		return http.StatusBadRequest, err.Code, err.Message
+	case apperror.KindNotFound:
+		return http.StatusNotFound, err.Code, err.Message
+	case apperror.KindConflict:
+		return http.StatusConflict, err.Code, err.Message
+	case apperror.KindUnauthorized:
+		return http.StatusUnauthorized, err.Code, err.Message
+	case apperror.KindForbidden:
+		return http.StatusForbidden, err.Code, err.Message
+	case apperror.KindInternal:
+		return http.StatusInternalServerError, "INTERNAL", safeInternalMessage(err.Message)
+	default:
+		return http.StatusInternalServerError, "INTERNAL", "internal server error"
+	}
+}
+
+func safeInternalMessage(message string) string {
+	if message == "" {
+		return "internal server error"
+	}
+	return message
 }

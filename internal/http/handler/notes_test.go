@@ -11,6 +11,7 @@ import (
 
 	"context"
 
+	"nucleus/internal/apperror"
 	"nucleus/internal/http/handler"
 	"nucleus/internal/service"
 	"nucleus/internal/store/storetest"
@@ -153,6 +154,27 @@ func TestWrapHandler_WrappedAppError(t *testing.T) {
 
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusNotFound)
+	}
+}
+
+func TestWrapHandler_WrappedApplicationError(t *testing.T) {
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+
+	handler.WrapHandler(func(http.ResponseWriter, *http.Request) error {
+		return fmt.Errorf("wrapped: %w", apperror.Conflict("note already exists"))
+	})(w, req)
+
+	if w.Code != http.StatusConflict {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusConflict)
+	}
+
+	var resp handler.ErrorResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
+	if resp.Error.Code != "CONFLICT" {
+		t.Errorf("error code = %q, want CONFLICT", resp.Error.Code)
 	}
 }
 

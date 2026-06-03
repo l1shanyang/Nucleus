@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -33,11 +32,7 @@ func (h *NoteHandler) Create(w http.ResponseWriter, r *http.Request) error {
 		Body:  req.Body,
 	})
 	if err != nil {
-		var validationErr *service.ValidationError
-		if errors.As(err, &validationErr) {
-			return BadRequest(validationErr.Message)
-		}
-		return Internal("failed to create note")
+		return err
 	}
 
 	WriteSuccess(w, http.StatusCreated, note)
@@ -57,7 +52,7 @@ func (h *NoteHandler) List(w http.ResponseWriter, r *http.Request) error {
 
 	notes, err := h.svc.List(r.Context(), int32(limit), int32(offset))
 	if err != nil {
-		return Internal("failed to list notes")
+		return err
 	}
 
 	WriteList(w, notes, map[string]any{
