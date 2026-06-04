@@ -181,7 +181,7 @@ MIGRATE_VERSION=v4.19.1
 GOVULNCHECK_VERSION=v1.3.0
 ```
 
-本地执行 `make lint`、`make sqlc-gen`、`make migrate-up` 时，会使用 Makefile 中声明的固定版本。这样足够清晰，也不会把脚手架复杂化。
+本地执行 `make lint`、`make sqlc`、`make migrate` 时，会使用 Makefile 中声明的固定版本。这样足够清晰，也不会把脚手架复杂化。
 
 ### 2.6 .golangci.yml — 静态分析配置
 

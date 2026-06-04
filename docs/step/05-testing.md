@@ -9,7 +9,7 @@
 | `internal/store/storetest/mock_note.go` | 新增 | NoteStore 的内存 mock 实现 |
 | `internal/service/note_test.go` | 新增 | service 层单元测试（table-driven） |
 | `internal/http/handler/notes_test.go` | 新增 | handler 层 HTTP 测试（httptest） |
-| `Makefile` | 改写 | 增加 `make cover` 覆盖率报告 |
+| `Makefile` | 改写 | 使用 `make test` 和 `make check` 承载本地测试流程 |
 | `docs/api/openapi.yaml` | 新增 | OpenAPI 3.0 接口文档 |
 
 ## 二、Go 测试基础
@@ -105,18 +105,17 @@ if w.Code != http.StatusCreated {
 - 测试速度快（毫秒级）
 - 可以精确检查状态码、响应头、响应体
 
-### 2.5 覆盖率
+### 2.5 测试与覆盖率
 
 ```bash
-make cover
+make test
 ```
 
-输出：
+如果需要临时查看覆盖率，可以直接使用 Go 原生命令，不再额外占用 Makefile 主命令：
 
-```
-nucleus/internal/service      coverage: 100.0%
-nucleus/internal/http/handler coverage: 68.3%
-total:                        23.7%
+```bash
+go test -coverprofile=coverage.out ./...
+go tool cover -func=coverage.out
 ```
 
 - 100% 不是目标，但关键业务逻辑（service）应该尽量高

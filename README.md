@@ -18,7 +18,7 @@
 
 - Go 1.26.4
 - Docker / Docker Compose
-- sqlc / migrate / golangci-lint / govulncheck（`make deps` 可安装固定版本）
+- sqlc / migrate / golangci-lint / govulncheck 由 Makefile 通过固定版本 `go run` 调用，无需全局安装
 
 ### 1. 初始化环境
 
@@ -30,8 +30,8 @@ set -a && source .env && set +a
 ### 2. 启动数据库 & 迁移
 
 ```bash
-make db-up
-make migrate-up
+make db
+make migrate
 ```
 
 ### 3. 运行
@@ -61,28 +61,27 @@ curl "http://localhost:8080/api/v1/notes?limit=20&offset=0"
 
 ```bash
 make help           # 查看所有命令
-make versions       # 查看固定工具版本
+make version        # 查看固定工具版本
 make build          # 构建二进制到 bin/
 make run            # 本地运行
 make test           # 运行测试
-make test-integration # 运行真实 PostgreSQL 集成测试，需要 TEST_DATABASE_URL
+make it             # 运行真实 PostgreSQL 集成测试，需要 TEST_DATABASE_URL
 make fmt            # 格式化代码
 make lint           # 使用固定版本 golangci-lint 静态检查
 make check          # fmt + lint + test + vuln
-make tidy           # 整理 go.mod 依赖
 make clean          # 清理构建产物
-make deps           # 安装固定版本开发工具
-make db-up          # 启动 PostgreSQL
-make db-down        # 停止所有容器
-make migrate-up     # 执行迁移
-make migrate-down   # 回滚一个迁移
-make sqlc-gen       # 重新生成 sqlc 代码
+make db             # 启动 PostgreSQL
+make down           # 停止所有容器
+make migrate        # 执行迁移
+make rollback       # 回滚一个迁移
+make sqlc           # 重新生成 sqlc 代码
+make docker         # 构建生产 Docker 镜像
 ```
 
 集成测试不会被普通 `make test` 执行。需要真实数据库时显式运行：
 
 ```bash
-TEST_DATABASE_URL=postgres://user:pass@localhost:5432/nucleus_test?sslmode=disable make test-integration
+TEST_DATABASE_URL=postgres://user:pass@localhost:5432/nucleus_test?sslmode=disable make it
 ```
 
 为避免误清理开发库，`TEST_DATABASE_URL` 的数据库名必须包含 `test`。
@@ -129,7 +128,7 @@ docs/                     # 项目文档
 工具版本在 `Makefile` 顶部维护。这个项目不依赖 GitHub CI，版本管理保持轻量：Go 使用 `1.26.4`，代码生成、迁移、lint、安全扫描工具固定具体版本，避免关键工具漂移。
 
 ```bash
-make versions
+make version
 ```
 
 业务依赖版本由 `go.mod` / `go.sum` 管理；本地开发工具版本由 Makefile 管理。

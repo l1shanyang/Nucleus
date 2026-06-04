@@ -3,17 +3,17 @@
 ## 构建镜像
 
 ```bash
-make docker-build
+make docker
 ```
 
-`make docker-build` 会通过 Makefile 里的 `GO_VERSION` build arg 构建镜像。产物：`nucleus-api:latest`（约 10MB，scratch 基础镜像）。
+`make docker` 会通过 Makefile 里的 `GO_VERSION` build arg 构建镜像。产物：`nucleus-api:latest`（约 10MB，scratch 基础镜像）。
 
 ## 工具版本
 
 工具版本维护在 Makefile 顶部：
 
 ```bash
-make versions
+make version
 ```
 
 本项目当前不依赖 GitHub CI；仓库重点是学习后端基础架构和脚手架搭建。关键开发工具通过 Makefile 固定版本即可。
@@ -47,10 +47,10 @@ docker run -d \
 
 ```bash
 # 启动数据库
-make db-up
+make db
 
 # 执行迁移
-make migrate-up
+make migrate
 
 # 启动服务（本地 Go）
 make run
@@ -70,15 +70,15 @@ curl http://localhost:8080/readyz
 
 ```bash
 # 升级
-make migrate-up
+make migrate
 
 # 回滚一个版本
-make migrate-down
+make rollback
 ```
 
 ## 质量门禁
 
 ```bash
 make check   # fmt + lint + test + vuln
-make cover   # 测试覆盖率报告
+make test    # 运行测试
 ```

@@ -32,7 +32,7 @@ Go 编译出的是静态二进制，运行时不需要 Go 工具链、源码、�
 
 **scratch 镜像：** 空镜像，没有 shell、没有包管理器、没有任何系统文件。只有你的二进制和 SSL 证书。
 
-**GO_VERSION：** Dockerfile 通过 build arg 接收 Go 版本，`make docker-build` 从 Makefile 注入。当前固定为 Go 1.26.4，避免安全扫描因为本地标准库 patch 版本过低失败。
+**GO_VERSION：** Dockerfile 通过 build arg 接收 Go 版本，`make docker` 从 Makefile 注入。当前固定为 Go 1.26.4，避免安全扫描因为本地标准库 patch 版本过低失败。
 
 **CGO_ENABLED=0：** 禁用 CGO，确保编译出纯 Go 静态二进制，不依赖系统 C 库。
 
@@ -80,12 +80,12 @@ GitHub 只作为代码存储仓库时，不需要维护 GitHub Actions。后续�
 ### 2.4 依赖安全扫描 — govulncheck
 
 ```bash
-make vuln
+make check
 ```
 
 govulncheck 会检查项目依赖中是否有已知的安全漏洞。它从 Go 官方漏洞数据库获取数据。
 
-本地可以通过 `make vuln` 主动检查。后续如果引入 CI，再把同一条命令接入流水线即可。
+本地可以通过 `make check` 主动检查。后续如果引入 CI，再把同一条命令接入流水线即可。
 
 ### 2.5 部署文档
 

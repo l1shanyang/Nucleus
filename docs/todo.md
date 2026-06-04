@@ -206,7 +206,7 @@
 
 - 新增 `internal/db/dbtest`，统一连接测试数据库、执行 migration、清理测试表。
 - 新增带 `integration` build tag 的 store 集成测试。
-- 新增 `make test-integration`，通过 `TEST_DATABASE_URL` 显式指定测试数据库。
+- 新增 `make it`，通过 `TEST_DATABASE_URL` 显式指定测试数据库。
 - 普通 `make test` 不运行集成测试，保持日常反馈轻量。
 
 ### 7. OpenAPI 维护规范（已完成）
