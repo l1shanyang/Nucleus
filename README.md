@@ -16,7 +16,7 @@
 
 ### 前置条件
 
-- Go 1.26.x
+- Go 1.26.4
 - Docker / Docker Compose
 - sqlc / migrate / golangci-lint / govulncheck（`make deps` 可安装固定版本）
 
@@ -126,7 +126,7 @@ docs/                     # 项目文档
 
 ## 工具版本
 
-工具版本在 `Makefile` 顶部维护。这个项目不依赖 GitHub CI，版本管理保持轻量：Go 使用 `1.26.x`，代码生成、迁移、lint、安全扫描工具固定具体版本，避免关键工具漂移。
+工具版本在 `Makefile` 顶部维护。这个项目不依赖 GitHub CI，版本管理保持轻量：Go 使用 `1.26.4`，代码生成、迁移、lint、安全扫描工具固定具体版本，避免关键工具漂移。
 
 ```bash
 make versions

@@ -174,7 +174,7 @@ help:
 因此工具版本直接放在 Makefile 顶部：
 
 ```makefile
-GO_VERSION := 1.26
+GO_VERSION := 1.26.4
 GOLANGCI_LINT_VERSION=v2.12.2
 SQLC_VERSION=v1.31.1
 MIGRATE_VERSION=v4.19.1

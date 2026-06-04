@@ -4,7 +4,7 @@ MIGRATION_DIR := sql/migrations
 SQLC_CONFIG := sqlc.yaml
 DB_URL      ?= postgres://nucleus:nucleus@localhost:5432/nucleus?sslmode=disable
 DOCKER_DB_URL ?= postgres://nucleus:nucleus@db:5432/nucleus?sslmode=disable
-GO_VERSION := 1.26
+GO_VERSION := 1.26.4
 GOLANGCI_LINT_VERSION := v2.12.2
 SQLC_VERSION := v1.31.1
 MIGRATE_VERSION := v4.19.1

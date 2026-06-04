@@ -16,7 +16,7 @@ Nucleus 是一个用于学习和长期演进的 Go 后端原子脚手架。重�
 - GitHub 仅作为代码存储仓库，不依赖 GitHub Actions 完成 CI。
 - 质量检查通过本地 `make check` 完成。
 - 工具版本直接在 Makefile 顶部维护，不使用独立 `versions.env`。
-- Go 使用 `1.26.x` 级别约束，不做 patch 级强制检查。
+- Go 使用 `1.26.4`，避免 `govulncheck` 因本地标准库 patch 版本过低失败。
 - Docker、PostgreSQL、sqlc、migrate、golangci-lint、govulncheck 保持清晰固定版本即可。
 - `notes` 模块只是用于演示 API、分层调用和数据库访问写法的 demo，不作为后续基础架构设计的业务依据。
 

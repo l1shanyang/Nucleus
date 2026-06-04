@@ -1,5 +1,5 @@
 # ---- 编译阶段 ----
-ARG GO_VERSION=1.26
+ARG GO_VERSION=1.26.4
 FROM golang:${GO_VERSION}-alpine AS builder
 
 RUN apk add --no-cache git

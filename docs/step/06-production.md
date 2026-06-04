@@ -22,7 +22,7 @@
 Go 编译出的是静态二进制，运行时不需要 Go 工具链、源码、依赖缓存。多阶段构建把编译和运行分开：
 
 ```
-阶段 1 (builder): golang:1.26-alpine
+阶段 1 (builder): golang:1.26.4-alpine
   → 安装依赖、编译二进制
 
 阶段 2 (runtime): scratch (~0MB)
@@ -32,7 +32,7 @@ Go 编译出的是静态二进制，运行时不需要 Go 工具链、源码、�
 
 **scratch 镜像：** 空镜像，没有 shell、没有包管理器、没有任何系统文件。只有你的二进制和 SSL 证书。
 
-**GO_VERSION：** Dockerfile 通过 build arg 接收 Go 版本，`make docker-build` 从 Makefile 注入。脚手架阶段只约束 Go minor 版本，避免 patch 级版本治理过重。
+**GO_VERSION：** Dockerfile 通过 build arg 接收 Go 版本，`make docker-build` 从 Makefile 注入。当前固定为 Go 1.26.4，避免安全扫描因为本地标准库 patch 版本过低失败。
 
 **CGO_ENABLED=0：** 禁用 CGO，确保编译出纯 Go 静态二进制，不依赖系统 C 库。
 
