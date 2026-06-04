@@ -39,11 +39,12 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	noteSvc := service.NewNoteService(noteStore)
 
 	healthHandler := handler.NewHealthHandler(pool)
+	versionHandler := handler.NewVersionHandler()
 	noteHandler := handler.NewNoteHandler(noteSvc)
 
 	server := &http.Server{
 		Addr:              ":" + cfg.HTTP.Port,
-		Handler:           router.New(healthHandler, noteHandler, router.Options{CORSAllowedOrigins: cfg.HTTP.CORSOrigins}),
+		Handler:           router.New(healthHandler, versionHandler, noteHandler, router.Options{CORSAllowedOrigins: cfg.HTTP.CORSOrigins}),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       cfg.HTTP.ReadTimeout,
 		WriteTimeout:      cfg.HTTP.WriteTimeout,

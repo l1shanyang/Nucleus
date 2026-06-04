@@ -15,7 +15,12 @@ type Options struct {
 	CORSAllowedOrigins []string
 }
 
-func New(healthHandler *handler.HealthHandler, noteHandler *handler.NoteHandler, opts Options) http.Handler {
+func New(
+	healthHandler *handler.HealthHandler,
+	versionHandler *handler.VersionHandler,
+	noteHandler *handler.NoteHandler,
+	opts Options,
+) http.Handler {
 	r := chi.NewRouter()
 
 	// 全局中间件
@@ -30,6 +35,7 @@ func New(healthHandler *handler.HealthHandler, noteHandler *handler.NoteHandler,
 	// 运维端点
 	r.Get("/healthz", healthHandler.Live)
 	r.Get("/readyz", healthHandler.Ready)
+	r.Get("/version", versionHandler.Show)
 
 	// 业务 API
 	r.Route("/api/v1", func(r chi.Router) {

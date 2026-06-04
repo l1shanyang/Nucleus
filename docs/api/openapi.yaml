@@ -43,6 +43,18 @@ paths:
               schema:
                 $ref: "#/components/schemas/ReadyResponse"
 
+  /version:
+    get:
+      summary: 构建版本信息
+      tags: [运维]
+      responses:
+        "200":
+          description: 当前运行版本
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VersionResponse"
+
   /api/v1/notes:
     post:
       summary: 创建笔记
@@ -185,6 +197,23 @@ components:
         database:
           type: string
           enum: [ok, unavailable]
+
+    VersionResponse:
+      type: object
+      required: [version, commit, build_time, go_version]
+      properties:
+        version:
+          type: string
+          example: "0.1.0"
+        commit:
+          type: string
+          example: "abc1234"
+        build_time:
+          type: string
+          example: "2026-06-04T10:00:00Z"
+        go_version:
+          type: string
+          example: "go1.26.4"
 
     ErrorResponse:
       type: object

@@ -239,7 +239,7 @@
 - notes demo 的列表分页、错误响应和当前代码结构保持一致。
 - README 增加 API 契约文档入口。
 
-### 8. Version Endpoint
+### 8. Version Endpoint（已完成）
 
 目标：暴露构建信息，理解 Go 二进制构建参数。
 
@@ -260,6 +260,13 @@
 - `/version` 返回构建信息。
 - OpenAPI 同步更新。
 - 有 handler 测试。
+
+实现：
+
+- 新增 `VersionHandler`，复用 `internal/version.Get()`。
+- router 增加 `GET /version` 运维端点。
+- OpenAPI 增加 `/version` 和 `VersionResponse`。
+- 增加 handler 测试，验证响应包含版本、commit、build time、Go runtime 版本。
 
 ## 暂不推进
 
