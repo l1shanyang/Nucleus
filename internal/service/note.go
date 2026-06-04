@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"nucleus/internal/apperror"
@@ -40,6 +41,10 @@ func (s *NoteService) Create(ctx context.Context, input CreateInput) (store.Note
 
 	note, err := s.store.Create(ctx, input.Title, input.Body)
 	if err != nil {
+		var appErr *apperror.Error
+		if errors.As(err, &appErr) {
+			return store.Note{}, err
+		}
 		return store.Note{}, apperror.Internal("failed to create note", err)
 	}
 	return note, nil
@@ -59,6 +64,10 @@ func (s *NoteService) List(ctx context.Context, limit, offset int32) ([]store.No
 
 	notes, err := s.store.List(ctx, limit, offset)
 	if err != nil {
+		var appErr *apperror.Error
+		if errors.As(err, &appErr) {
+			return nil, err
+		}
 		return nil, apperror.Internal("failed to list notes", err)
 	}
 	return notes, nil

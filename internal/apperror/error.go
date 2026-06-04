@@ -40,24 +40,31 @@ func newError(kind Kind, code, message string, err error) *Error {
 	}
 }
 
-func Validation(message string) *Error {
-	return newError(KindValidation, "BAD_REQUEST", message, nil)
+func firstCause(causes []error) error {
+	if len(causes) == 0 {
+		return nil
+	}
+	return causes[0]
 }
 
-func NotFound(message string) *Error {
-	return newError(KindNotFound, "NOT_FOUND", message, nil)
+func Validation(message string, cause ...error) *Error {
+	return newError(KindValidation, "BAD_REQUEST", message, firstCause(cause))
 }
 
-func Conflict(message string) *Error {
-	return newError(KindConflict, "CONFLICT", message, nil)
+func NotFound(message string, cause ...error) *Error {
+	return newError(KindNotFound, "NOT_FOUND", message, firstCause(cause))
 }
 
-func Unauthorized(message string) *Error {
-	return newError(KindUnauthorized, "UNAUTHORIZED", message, nil)
+func Conflict(message string, cause ...error) *Error {
+	return newError(KindConflict, "CONFLICT", message, firstCause(cause))
 }
 
-func Forbidden(message string) *Error {
-	return newError(KindForbidden, "FORBIDDEN", message, nil)
+func Unauthorized(message string, cause ...error) *Error {
+	return newError(KindUnauthorized, "UNAUTHORIZED", message, firstCause(cause))
+}
+
+func Forbidden(message string, cause ...error) *Error {
+	return newError(KindForbidden, "FORBIDDEN", message, firstCause(cause))
 }
 
 func Internal(message string, err error) *Error {

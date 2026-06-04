@@ -148,7 +148,7 @@
 - 回调成功时提交事务，回调失败或提交失败时统一回滚。
 - 当前单表 Note CRUD 不强行接入事务，保留后续多表写入时使用。
 
-### 5. 数据库错误映射
+### 5. 数据库错误映射（已完成）
 
 目标：隔离 pgx/PostgreSQL 底层错误，向 service 暴露稳定错误语义。
 
@@ -170,6 +170,13 @@
 - store 层返回稳定业务错误。
 - handler 不感知 pgx / pgconn 细节。
 - 测试覆盖常见数据库错误映射。
+
+实现：
+
+- 新增 store 层数据库错误映射 helper。
+- 将 `pgx.ErrNoRows` 映射为 `apperror.NotFound`。
+- 将 PostgreSQL 唯一约束和外键约束错误映射为 `apperror.Conflict`。
+- service 层遇到已映射的 `apperror.Error` 时直接向上返回，未知错误才包装为 `Internal`。
 
 ### 6. Store 集成测试基础
 

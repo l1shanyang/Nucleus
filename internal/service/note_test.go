@@ -115,6 +115,28 @@ func TestNoteService_Create_StoreError(t *testing.T) {
 	}
 }
 
+func TestNoteService_Create_ApplicationStoreError(t *testing.T) {
+	mock := storetest.NewMockNoteStore()
+	mock.CreateErr = apperror.Conflict("note already exists", errors.New("unique violation"))
+	svc := service.NewNoteService(mock)
+
+	_, err := svc.Create(context.Background(), service.CreateInput{Title: "Test", Body: "Content"})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	var appErr *apperror.Error
+	if !errors.As(err, &appErr) {
+		t.Fatalf("expected apperror.Error, got %T", err)
+	}
+	if appErr.Kind != apperror.KindConflict {
+		t.Fatalf("kind = %q, want %q", appErr.Kind, apperror.KindConflict)
+	}
+	if appErr.Message != "note already exists" {
+		t.Fatalf("message = %q, want note already exists", appErr.Message)
+	}
+}
+
 func TestNoteService_List(t *testing.T) {
 	mock := storetest.NewMockNoteStore()
 	svc := service.NewNoteService(mock)

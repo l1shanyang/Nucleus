@@ -39,7 +39,7 @@ func (s *noteStore) Create(ctx context.Context, title, body string) (Note, error
 		Body:  body,
 	})
 	if err != nil {
-		return Note{}, err
+		return Note{}, mapDBError(err, "note")
 	}
 	return toNote(row), nil
 }
@@ -50,7 +50,7 @@ func (s *noteStore) List(ctx context.Context, limit, offset int32) ([]Note, erro
 		Offset: offset,
 	})
 	if err != nil {
-		return nil, err
+		return nil, mapDBError(err, "note")
 	}
 
 	notes := make([]Note, len(rows))
