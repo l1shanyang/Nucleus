@@ -25,6 +25,7 @@
 - 每个主题都要解释它解决什么后端通用问题。
 - 不提前引入 GitHub CI、Kubernetes、复杂监控、队列、缓存、多租户等重型能力。
 - 业务模块出现真实需求后再抽象，不为了“成熟感”提前复杂化。
+- `notes` 只是 API 写法和分层调用 demo，后续基础设施设计不围绕 notes 的实际业务需求展开。
 
 ## 后续顺序
 
@@ -178,7 +179,7 @@
 - 将 PostgreSQL 唯一约束和外键约束错误映射为 `apperror.Conflict`。
 - service 层遇到已映射的 `apperror.Error` 时直接向上返回，未知错误才包装为 `Internal`。
 
-### 6. Store 集成测试基础
+### 6. Store 集成测试基础（已完成）
 
 目标：打通真实 PostgreSQL 下的数据库测试能力。
 
@@ -200,6 +201,13 @@
 - 可以本地运行 store 集成测试。
 - 测试使用真实 PostgreSQL。
 - 不影响普通 `make test` 的轻量体验，必要时单独命令运行。
+
+实现：
+
+- 新增 `internal/db/dbtest`，统一连接测试数据库、执行 migration、清理测试表。
+- 新增带 `integration` build tag 的 store 集成测试。
+- 新增 `make test-integration`，通过 `TEST_DATABASE_URL` 显式指定测试数据库。
+- 普通 `make test` 不运行集成测试，保持日常反馈轻量。
 
 ### 7. OpenAPI 维护规范
 

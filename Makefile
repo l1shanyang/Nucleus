@@ -20,7 +20,7 @@ LDFLAGS     := -s -w \
 	-X $(MODULE)/internal/version.BuildTime=$(BUILD_TIME)
 
 .PHONY: help versions deps db-up db-down migrate-up migrate-down sqlc-gen \
-	run build docker-build test cover fmt lint vuln check tidy clean
+	run build docker-build test test-integration cover fmt lint vuln check tidy clean
 
 help: ## Show this help
 	@grep -h -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -97,6 +97,14 @@ docker-build: ## Build production Docker image
 
 test: ## Run all tests
 	go test -v -count=1 ./...
+
+test-integration: ## Run integration tests against TEST_DATABASE_URL
+	@if [ -z "$(TEST_DATABASE_URL)" ]; then \
+		echo "TEST_DATABASE_URL is required"; \
+		echo "Example: TEST_DATABASE_URL=postgres://user:pass@localhost:5432/nucleus_test?sslmode=disable make test-integration"; \
+		exit 1; \
+	fi
+	TEST_DATABASE_URL="$(TEST_DATABASE_URL)" go test -v -count=1 -tags=integration ./...
 
 cover: ## Run tests with coverage report
 	go test -coverprofile=coverage.out ./...

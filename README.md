@@ -65,6 +65,7 @@ make versions       # 查看固定工具版本
 make build          # 构建二进制到 bin/
 make run            # 本地运行
 make test           # 运行测试
+make test-integration # 运行真实 PostgreSQL 集成测试，需要 TEST_DATABASE_URL
 make fmt            # 格式化代码
 make lint           # 使用固定版本 golangci-lint 静态检查
 make check          # fmt + lint + test + vuln
@@ -77,6 +78,14 @@ make migrate-up     # 执行迁移
 make migrate-down   # 回滚一个迁移
 make sqlc-gen       # 重新生成 sqlc 代码
 ```
+
+集成测试不会被普通 `make test` 执行。需要真实数据库时显式运行：
+
+```bash
+TEST_DATABASE_URL=postgres://user:pass@localhost:5432/nucleus_test?sslmode=disable make test-integration
+```
+
+为避免误清理开发库，`TEST_DATABASE_URL` 的数据库名必须包含 `test`。
 
 ## 项目结构
 
