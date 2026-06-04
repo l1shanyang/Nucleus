@@ -209,7 +209,7 @@
 - 新增 `make test-integration`，通过 `TEST_DATABASE_URL` 显式指定测试数据库。
 - 普通 `make test` 不运行集成测试，保持日常反馈轻量。
 
-### 7. OpenAPI 维护规范
+### 7. OpenAPI 维护规范（已完成）
 
 目标：让 API 文档成为前后端协作契约。
 
@@ -231,6 +231,13 @@
 - 当前 notes 接口文档和实际响应一致。
 - 错误和分页 schema 可复用。
 - 有简短维护说明。
+
+实现：
+
+- 补充 `docs/api/README.md`，说明 OpenAPI 维护规则。
+- `openapi.yaml` 增加可复用 `PaginationMeta` 和 `ErrorBody`。
+- notes demo 的列表分页、错误响应和当前代码结构保持一致。
+- README 增加 API 契约文档入口。
 
 ### 8. Version Endpoint
 

@@ -1,7 +1,7 @@
 openapi: "3.0.3"
 info:
   title: Nucleus API
-  description: Nucleus 后端骨架 API
+  description: Nucleus 后端骨架 API。notes 仅用于演示 API 和分层写法。
   version: "0.1.0"
 
 servers:
@@ -66,6 +66,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: 内部错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
     get:
       summary: 查询笔记列表
@@ -76,6 +82,7 @@ paths:
           schema:
             type: integer
             default: 20
+            minimum: 1
             maximum: 100
           description: 每页条数
         - name: offset
@@ -83,6 +90,7 @@ paths:
           schema:
             type: integer
             default: 0
+            minimum: 0
           description: 偏移量
       responses:
         "200":
@@ -91,6 +99,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/NoteListResponse"
+        "400":
+          description: 参数错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: 内部错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
 components:
   schemas:
@@ -125,27 +145,39 @@ components:
 
     NoteDataResponse:
       type: object
+      required: [data]
       properties:
         data:
           $ref: "#/components/schemas/Note"
 
     NoteListResponse:
       type: object
+      required: [data, meta]
       properties:
         data:
           type: array
           items:
             $ref: "#/components/schemas/Note"
         meta:
-          type: object
-          properties:
-            limit:
-              type: integer
-            offset:
-              type: integer
+          $ref: "#/components/schemas/PaginationMeta"
+
+    PaginationMeta:
+      type: object
+      required: [limit, offset]
+      properties:
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 20
+        offset:
+          type: integer
+          minimum: 0
+          example: 0
 
     ReadyResponse:
       type: object
+      required: [status, database]
       properties:
         status:
           type: string
@@ -156,13 +188,18 @@ components:
 
     ErrorResponse:
       type: object
+      required: [error]
       properties:
         error:
-          type: object
-          properties:
-            code:
-              type: string
-              example: BAD_REQUEST
-            message:
-              type: string
-              example: "title is required"
+          $ref: "#/components/schemas/ErrorBody"
+
+    ErrorBody:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: BAD_REQUEST
+        message:
+          type: string
+          example: "invalid json body"

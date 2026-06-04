@@ -136,4 +136,4 @@ make versions
 
 ## 文档
 
-项目约束详见 [docs/project-constraints.md](docs/project-constraints.md)，推进方案详见 [docs/todo.md](docs/todo.md)，每阶段的讲解文档在 [docs/step/](docs/step/) 目录。
+项目约束详见 [docs/project-constraints.md](docs/project-constraints.md)，推进方案详见 [docs/todo.md](docs/todo.md)，API 契约详见 [docs/api/openapi.yaml](docs/api/openapi.yaml)，维护规则详见 [docs/api/README.md](docs/api/README.md)。
