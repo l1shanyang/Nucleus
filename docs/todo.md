@@ -2,6 +2,8 @@
 
 本项目是学习型 Go 后端原子脚手架。目标不是追求完整生产平台，而是在保持简洁的前提下，逐步补齐所有业务都会复用的后端基础设施。
 
+本文记录的是脚手架阶段的推进历史。后续业务练习路线已经确定为 FlowDesk，多租户工单 / 工作流系统，详见 [flowdesk-roadmap.md](flowdesk-roadmap.md)。
+
 项目约束详见 [project-constraints.md](project-constraints.md)。
 
 ## 当前状态
@@ -268,9 +270,9 @@
 - OpenAPI 增加 `/version` 和 `VersionResponse`。
 - 增加 handler 测试，验证响应包含版本、commit、build time、Go runtime 版本。
 
-## 暂不推进
+## 脚手架阶段暂不推进
 
-以下能力暂时不作为当前脚手架目标：
+以下能力暂时不作为脚手架阶段目标。进入 FlowDesk 业务路线后，会按业务闭环逐步引入，而不是一次性全部铺开：
 
 - GitHub CI
 - Kubernetes

@@ -135,4 +135,4 @@ make version
 
 ## 文档
 
-项目约束详见 [docs/project-constraints.md](docs/project-constraints.md)，推进方案详见 [docs/todo.md](docs/todo.md)，API 契约详见 [docs/api/openapi.yaml](docs/api/openapi.yaml)，维护规则详见 [docs/api/README.md](docs/api/README.md)。
+项目约束详见 [docs/project-constraints.md](docs/project-constraints.md)，脚手架阶段记录详见 [docs/todo.md](docs/todo.md)，后续业务练习路线详见 [docs/flowdesk-roadmap.md](docs/flowdesk-roadmap.md)，API 契约详见 [docs/api/openapi.yaml](docs/api/openapi.yaml)，维护规则详见 [docs/api/README.md](docs/api/README.md)。
