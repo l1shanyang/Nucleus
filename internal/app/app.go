@@ -36,8 +36,9 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 
 	queries := sqlc.New(pool.DB())
 	userStore := store.NewUserStore(queries)
+	sessionStore := store.NewSessionStore(queries)
 	noteStore := store.NewNoteStore(queries)
-	authSvc := service.NewAuthService(userStore)
+	authSvc := service.NewAuthService(userStore, sessionStore)
 	noteSvc := service.NewNoteService(noteStore)
 
 	healthHandler := handler.NewHealthHandler(pool)

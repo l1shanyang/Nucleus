@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -13,9 +14,15 @@ import (
 	"nucleus/internal/store/storetest"
 )
 
+func setupAuthService() (*service.AuthService, *storetest.MockUserStore, *storetest.MockSessionStore) {
+	users := storetest.NewMockUserStore()
+	sessions := storetest.NewMockSessionStore()
+	svc := service.NewAuthService(users, sessions)
+	return svc, users, sessions
+}
+
 func TestAuthService_Register_Success(t *testing.T) {
-	mock := storetest.NewMockUserStore()
-	svc := service.NewAuthService(mock)
+	svc, users, _ := setupAuthService()
 
 	user, err := svc.Register(context.Background(), service.RegisterInput{
 		Email:    "  USER@example.COM  ",
@@ -35,11 +42,11 @@ func TestAuthService_Register_Success(t *testing.T) {
 	if user.Name != "Alice" {
 		t.Fatalf("name = %q, want Alice", user.Name)
 	}
-	if len(mock.CreatedUsers) != 1 {
-		t.Fatalf("created users = %d, want 1", len(mock.CreatedUsers))
+	if len(users.CreatedUsers) != 1 {
+		t.Fatalf("created users = %d, want 1", len(users.CreatedUsers))
 	}
 
-	hash := mock.CreatedUsers[0].PasswordHash
+	hash := users.CreatedUsers[0].PasswordHash
 	if hash == "password123" {
 		t.Fatal("password was stored as plain text")
 	}
@@ -88,8 +95,7 @@ func TestAuthService_Register_Validation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mock := storetest.NewMockUserStore()
-			svc := service.NewAuthService(mock)
+			svc, users, _ := setupAuthService()
 
 			_, err := svc.Register(context.Background(), tt.input)
 			if err == nil {
@@ -106,7 +112,7 @@ func TestAuthService_Register_Validation(t *testing.T) {
 			if appErr.Message != tt.wantErr {
 				t.Fatalf("message = %q, want %q", appErr.Message, tt.wantErr)
 			}
-			if len(mock.CreatedUsers) != 0 {
+			if len(users.CreatedUsers) != 0 {
 				t.Fatalf("invalid input should not create users")
 			}
 		})
@@ -114,8 +120,7 @@ func TestAuthService_Register_Validation(t *testing.T) {
 }
 
 func TestAuthService_Register_DuplicateEmail(t *testing.T) {
-	mock := storetest.NewMockUserStore()
-	svc := service.NewAuthService(mock)
+	svc, _, _ := setupAuthService()
 
 	input := service.RegisterInput{Email: "user@example.com", Name: "Alice", Password: "password123"}
 	if _, err := svc.Register(context.Background(), input); err != nil {
@@ -140,9 +145,8 @@ func TestAuthService_Register_DuplicateEmail(t *testing.T) {
 }
 
 func TestAuthService_Register_StoreError(t *testing.T) {
-	mock := storetest.NewMockUserStore()
-	mock.CreateErr = &testError{"database unavailable"}
-	svc := service.NewAuthService(mock)
+	svc, users, _ := setupAuthService()
+	users.CreateErr = &testError{"database unavailable"}
 
 	_, err := svc.Register(context.Background(), service.RegisterInput{
 		Email:    "user@example.com",
@@ -160,7 +164,144 @@ func TestAuthService_Register_StoreError(t *testing.T) {
 	if appErr.Kind != apperror.KindInternal {
 		t.Fatalf("kind = %q, want %q", appErr.Kind, apperror.KindInternal)
 	}
-	if !errors.Is(err, mock.CreateErr) {
+	if !errors.Is(err, users.CreateErr) {
 		t.Fatal("expected service error to wrap store error")
 	}
+}
+
+func TestAuthService_Login_Success(t *testing.T) {
+	svc, _, sessions := setupAuthService()
+
+	registered, err := svc.Register(context.Background(), service.RegisterInput{
+		Email:    "user@example.com",
+		Name:     "Alice",
+		Password: "password123",
+	})
+	if err != nil {
+		t.Fatalf("register user: %v", err)
+	}
+
+	token, err := svc.Login(context.Background(), service.LoginInput{
+		Email:    "USER@example.com",
+		Password: "password123",
+	})
+	if err != nil {
+		t.Fatalf("login: %v", err)
+	}
+
+	if token.AccessToken == "" {
+		t.Fatal("expected access token")
+	}
+	if token.TokenType != "Bearer" {
+		t.Fatalf("token type = %q, want Bearer", token.TokenType)
+	}
+	if !token.ExpiresAt.After(timeNow()) {
+		t.Fatalf("expected future expiration, got %s", token.ExpiresAt)
+	}
+	if token.User.ID != registered.ID {
+		t.Fatalf("user id = %d, want %d", token.User.ID, registered.ID)
+	}
+	if len(sessions.CreatedSessions) != 1 {
+		t.Fatalf("created sessions = %d, want 1", len(sessions.CreatedSessions))
+	}
+	session := sessions.CreatedSessions[0]
+	if session.UserID != registered.ID {
+		t.Fatalf("session user id = %d, want %d", session.UserID, registered.ID)
+	}
+	if session.TokenHash == token.AccessToken {
+		t.Fatal("session token hash should not store raw access token")
+	}
+}
+
+func TestAuthService_Login_InvalidCredentials(t *testing.T) {
+	svc, _, _ := setupAuthService()
+	if _, err := svc.Register(context.Background(), service.RegisterInput{
+		Email:    "user@example.com",
+		Name:     "Alice",
+		Password: "password123",
+	}); err != nil {
+		t.Fatalf("register user: %v", err)
+	}
+
+	tests := []struct {
+		name  string
+		input service.LoginInput
+	}{
+		{
+			name:  "邮箱不存在",
+			input: service.LoginInput{Email: "missing@example.com", Password: "password123"},
+		},
+		{
+			name:  "密码错误",
+			input: service.LoginInput{Email: "user@example.com", Password: "wrong-password"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := svc.Login(context.Background(), tt.input)
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+
+			var appErr *apperror.Error
+			if !errors.As(err, &appErr) {
+				t.Fatalf("expected apperror.Error, got %T", err)
+			}
+			if appErr.Kind != apperror.KindUnauthorized {
+				t.Fatalf("kind = %q, want %q", appErr.Kind, apperror.KindUnauthorized)
+			}
+			if appErr.Message != "invalid email or password" {
+				t.Fatalf("message = %q, want invalid email or password", appErr.Message)
+			}
+		})
+	}
+}
+
+func TestAuthService_Authenticate(t *testing.T) {
+	svc, users, sessions := setupAuthService()
+
+	if _, err := svc.Register(context.Background(), service.RegisterInput{
+		Email:    "user@example.com",
+		Name:     "Alice",
+		Password: "password123",
+	}); err != nil {
+		t.Fatalf("register user: %v", err)
+	}
+
+	token, err := svc.Login(context.Background(), service.LoginInput{
+		Email:    "user@example.com",
+		Password: "password123",
+	})
+	if err != nil {
+		t.Fatalf("login: %v", err)
+	}
+	if len(sessions.CreatedSessions) != 1 || len(users.CreatedUsers) != 1 {
+		t.Fatal("expected one user and one session")
+	}
+	sessions.AttachUser(sessions.CreatedSessions[0].TokenHash, &users.CreatedUsers[0])
+
+	user, err := svc.Authenticate(context.Background(), token.AccessToken)
+	if err != nil {
+		t.Fatalf("authenticate: %v", err)
+	}
+	if user.Email != "user@example.com" {
+		t.Fatalf("email = %q, want user@example.com", user.Email)
+	}
+
+	_, err = svc.Authenticate(context.Background(), "invalid-token")
+	if err == nil {
+		t.Fatal("expected invalid token error, got nil")
+	}
+	var appErr *apperror.Error
+	if !errors.As(err, &appErr) {
+		t.Fatalf("expected apperror.Error, got %T", err)
+	}
+	if appErr.Kind != apperror.KindUnauthorized {
+		t.Fatalf("kind = %q, want %q", appErr.Kind, apperror.KindUnauthorized)
+	}
+}
+
+func timeNow() time.Time {
+	return time.Now()
 }

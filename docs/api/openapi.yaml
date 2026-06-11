@@ -91,6 +91,68 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /api/v1/auth/login:
+    post:
+      summary: 用户登录
+      tags: [认证]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthTokenDataResponse"
+        "400":
+          description: 参数错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: 邮箱或密码错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: 内部错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/me:
+    get:
+      summary: 当前用户信息
+      tags: [认证]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDataResponse"
+        "401":
+          description: 未认证或 token 无效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: 内部错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /api/v1/notes:
     post:
       summary: 创建笔记
@@ -182,6 +244,20 @@ components:
           writeOnly: true
           example: "password123"
 
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 320
+          example: "user@example.com"
+        password:
+          type: string
+          writeOnly: true
+          example: "password123"
+
     User:
       type: object
       required: [id, email, name, created_at]
@@ -207,6 +283,30 @@ components:
       properties:
         data:
           $ref: "#/components/schemas/User"
+
+    AuthToken:
+      type: object
+      required: [access_token, token_type, expires_at, user]
+      properties:
+        access_token:
+          type: string
+          example: "RZwnGdijxJ4Y2U2qKQrGec-OMe4c0vmp0b2yTbVB5YY"
+        token_type:
+          type: string
+          enum: [Bearer]
+          example: "Bearer"
+        expires_at:
+          type: string
+          format: date-time
+        user:
+          $ref: "#/components/schemas/User"
+
+    AuthTokenDataResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/AuthToken"
 
     CreateNoteRequest:
       type: object
@@ -314,3 +414,8 @@ components:
         message:
           type: string
           example: "invalid json body"
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer

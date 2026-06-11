@@ -65,3 +65,13 @@ func (m *MockUserStore) GetByEmail(_ context.Context, email string) (store.User,
 func (m *MockUserStore) WithTx(pgx.Tx) store.UserStore {
 	return m
 }
+
+func (m *MockUserStore) Put(user *store.User) {
+	if m.users == nil {
+		m.users = make(map[string]store.User)
+	}
+	m.users[user.Email] = *user
+	if user.ID >= m.nextID {
+		m.nextID = user.ID + 1
+	}
+}
