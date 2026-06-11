@@ -35,16 +35,19 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	}
 
 	queries := sqlc.New(pool.DB())
+	userStore := store.NewUserStore(queries)
 	noteStore := store.NewNoteStore(queries)
+	authSvc := service.NewAuthService(userStore)
 	noteSvc := service.NewNoteService(noteStore)
 
 	healthHandler := handler.NewHealthHandler(pool)
 	versionHandler := handler.NewVersionHandler()
+	authHandler := handler.NewAuthHandler(authSvc)
 	noteHandler := handler.NewNoteHandler(noteSvc)
 
 	server := &http.Server{
 		Addr:              ":" + cfg.HTTP.Port,
-		Handler:           router.New(healthHandler, versionHandler, noteHandler, router.Options{CORSAllowedOrigins: cfg.HTTP.CORSOrigins}),
+		Handler:           router.New(healthHandler, versionHandler, authHandler, noteHandler, router.Options{CORSAllowedOrigins: cfg.HTTP.CORSOrigins}),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       cfg.HTTP.ReadTimeout,
 		WriteTimeout:      cfg.HTTP.WriteTimeout,

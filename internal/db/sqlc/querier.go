@@ -10,6 +10,8 @@ import (
 
 type Querier interface {
 	CreateNote(ctx context.Context, arg CreateNoteParams) (Note, error)
+	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	GetUserByEmail(ctx context.Context, email string) (User, error)
 	ListNotes(ctx context.Context, arg ListNotesParams) ([]Note, error)
 }
 

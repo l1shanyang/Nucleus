@@ -18,6 +18,7 @@ type Options struct {
 func New(
 	healthHandler *handler.HealthHandler,
 	versionHandler *handler.VersionHandler,
+	authHandler *handler.AuthHandler,
 	noteHandler *handler.NoteHandler,
 	opts Options,
 ) http.Handler {
@@ -39,6 +40,7 @@ func New(
 
 	// 业务 API
 	r.Route("/api/v1", func(r chi.Router) {
+		r.Post("/auth/register", handler.WrapHandler(authHandler.Register))
 		r.Post("/notes", handler.WrapHandler(noteHandler.Create))
 		r.Get("/notes", handler.WrapHandler(noteHandler.List))
 	})
