@@ -153,6 +153,116 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /api/v1/workspaces:
+    post:
+      summary: 创建 Workspace
+      tags: [Workspace]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWorkspaceRequest"
+      responses:
+        "201":
+          description: 创建成功，当前用户自动成为 owner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceDataResponse"
+        "400":
+          description: 参数错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: 未认证或 token 无效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: 内部错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    get:
+      summary: 查询当前用户的 Workspace 列表
+      tags: [Workspace]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceListDataResponse"
+        "401":
+          description: 未认证或 token 无效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: 内部错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/workspaces/{workspaceID}:
+    get:
+      summary: 查询当前用户可访问的 Workspace 详情
+      tags: [Workspace]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: workspaceID
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+          description: Workspace ID
+      responses:
+        "200":
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceDataResponse"
+        "400":
+          description: 参数错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: 未认证或 token 无效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Workspace 不存在或当前用户无成员身份
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: 内部错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /api/v1/notes:
     post:
       summary: 创建笔记
@@ -307,6 +417,53 @@ components:
       properties:
         data:
           $ref: "#/components/schemas/AuthToken"
+
+    CreateWorkspaceRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          example: "Support Team"
+
+    Workspace:
+      type: object
+      required: [id, name, role, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: "Support Team"
+        role:
+          type: string
+          enum: [owner, admin, agent, viewer]
+          example: owner
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    WorkspaceDataResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/Workspace"
+
+    WorkspaceListDataResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Workspace"
 
     CreateNoteRequest:
       type: object

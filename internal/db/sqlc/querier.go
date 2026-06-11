@@ -12,9 +12,13 @@ type Querier interface {
 	CreateAuthSession(ctx context.Context, arg CreateAuthSessionParams) (AuthSession, error)
 	CreateNote(ctx context.Context, arg CreateNoteParams) (Note, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams) (Workspace, error)
+	CreateWorkspaceMember(ctx context.Context, arg CreateWorkspaceMemberParams) (WorkspaceMember, error)
 	GetAuthSessionUserByTokenHash(ctx context.Context, tokenHash string) (User, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
+	GetWorkspaceForUser(ctx context.Context, arg GetWorkspaceForUserParams) (GetWorkspaceForUserRow, error)
 	ListNotes(ctx context.Context, arg ListNotesParams) ([]Note, error)
+	ListWorkspacesForUser(ctx context.Context, userID int64) ([]ListWorkspacesForUserRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

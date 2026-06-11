@@ -19,6 +19,7 @@ func New(
 	healthHandler *handler.HealthHandler,
 	versionHandler *handler.VersionHandler,
 	authHandler *handler.AuthHandler,
+	workspaceHandler *handler.WorkspaceHandler,
 	noteHandler *handler.NoteHandler,
 	opts Options,
 ) http.Handler {
@@ -43,6 +44,12 @@ func New(
 		r.Post("/auth/register", handler.WrapHandler(authHandler.Register))
 		r.Post("/auth/login", handler.WrapHandler(authHandler.Login))
 		r.With(authHandler.RequireAuth).Get("/me", handler.WrapHandler(authHandler.Me))
+		r.Group(func(r chi.Router) {
+			r.Use(authHandler.RequireAuth)
+			r.Post("/workspaces", handler.WrapHandler(workspaceHandler.Create))
+			r.Get("/workspaces", handler.WrapHandler(workspaceHandler.List))
+			r.Get("/workspaces/{workspaceID}", handler.WrapHandler(workspaceHandler.Get))
+		})
 		r.Post("/notes", handler.WrapHandler(noteHandler.Create))
 		r.Get("/notes", handler.WrapHandler(noteHandler.List))
 	})
