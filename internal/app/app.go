@@ -41,7 +41,7 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	workspaceStore := store.NewWorkspaceStore(queries)
 	noteStore := store.NewNoteStore(queries)
 	authSvc := service.NewAuthService(userStore, sessionStore)
-	workspaceSvc := service.NewWorkspaceService(workspaceStore, txManager)
+	workspaceSvc := service.NewWorkspaceService(workspaceStore, userStore, txManager)
 	noteSvc := service.NewNoteService(noteStore)
 
 	healthHandler := handler.NewHealthHandler(pool)

@@ -7,12 +7,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 
 	"nucleus/internal/http/handler"
 	"nucleus/internal/service"
+	"nucleus/internal/store"
 	"nucleus/internal/store/storetest"
 )
 
@@ -28,7 +30,7 @@ func setupWorkspaceHandler() (*handler.AuthHandler, *handler.WorkspaceHandler, *
 	workspaces := storetest.NewMockWorkspaceStore()
 
 	authSvc := service.NewAuthService(users, sessions)
-	workspaceSvc := service.NewWorkspaceService(workspaces, fakeWorkspaceHandlerTxManager{})
+	workspaceSvc := service.NewWorkspaceService(workspaces, users, fakeWorkspaceHandlerTxManager{})
 
 	return handler.NewAuthHandler(authSvc), handler.NewWorkspaceHandler(workspaceSvc), users, sessions
 }
@@ -166,4 +168,103 @@ func TestWorkspaceHandler_Get_InvalidID(t *testing.T) {
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d, body: %s", w.Code, http.StatusBadRequest, w.Body.String())
 	}
+}
+
+func TestWorkspaceHandler_MemberManagement(t *testing.T) {
+	authHandler, workspaceHandler, users, sessions := setupWorkspaceHandler()
+	token := loginWorkspaceUser(t, authHandler, users, sessions)
+	seedWorkspaceMemberUser(users, &store.User{
+		ID:           2,
+		Email:        "agent@example.com",
+		Name:         "Agent",
+		PasswordHash: "unused",
+	})
+
+	r := chi.NewRouter()
+	r.Group(func(r chi.Router) {
+		r.Use(authHandler.RequireAuth)
+		r.Post("/api/v1/workspaces", handler.WrapHandler(workspaceHandler.Create))
+		r.Post("/api/v1/workspaces/{workspaceID}/members", handler.WrapHandler(workspaceHandler.AddMember))
+		r.Get("/api/v1/workspaces/{workspaceID}/members", handler.WrapHandler(workspaceHandler.ListMembers))
+		r.Patch("/api/v1/workspaces/{workspaceID}/members/{memberID}/role", handler.WrapHandler(workspaceHandler.UpdateMemberRole))
+		r.Delete("/api/v1/workspaces/{workspaceID}/members/{memberID}", handler.WrapHandler(workspaceHandler.RemoveMember))
+	})
+
+	createReq := httptest.NewRequest(http.MethodPost, "/api/v1/workspaces", bytes.NewBufferString(`{"name":"Support"}`))
+	createReq.Header.Set("Content-Type", "application/json")
+	createReq.Header.Set("Authorization", "Bearer "+token)
+	createW := httptest.NewRecorder()
+	r.ServeHTTP(createW, createReq)
+	if createW.Code != http.StatusCreated {
+		t.Fatalf("create status = %d, want %d, body: %s", createW.Code, http.StatusCreated, createW.Body.String())
+	}
+
+	addReq := httptest.NewRequest(http.MethodPost, "/api/v1/workspaces/1/members", bytes.NewBufferString(`{"email":"agent@example.com","role":"agent"}`))
+	addReq.Header.Set("Content-Type", "application/json")
+	addReq.Header.Set("Authorization", "Bearer "+token)
+	addW := httptest.NewRecorder()
+	r.ServeHTTP(addW, addReq)
+	if addW.Code != http.StatusCreated {
+		t.Fatalf("add status = %d, want %d, body: %s", addW.Code, http.StatusCreated, addW.Body.String())
+	}
+	var addResp handler.SuccessResponse
+	if err := json.Unmarshal(addW.Body.Bytes(), &addResp); err != nil {
+		t.Fatalf("failed to parse add response: %v", err)
+	}
+	added := addResp.Data.(map[string]any)
+	if added["user_email"] != "agent@example.com" || added["role"] != "agent" {
+		t.Fatalf("added member = %+v, want agent@example.com agent", added)
+	}
+
+	listReq := httptest.NewRequest(http.MethodGet, "/api/v1/workspaces/1/members", http.NoBody)
+	listReq.Header.Set("Authorization", "Bearer "+token)
+	listW := httptest.NewRecorder()
+	r.ServeHTTP(listW, listReq)
+	if listW.Code != http.StatusOK {
+		t.Fatalf("list status = %d, want %d, body: %s", listW.Code, http.StatusOK, listW.Body.String())
+	}
+	var listResp handler.SuccessResponse
+	if err := json.Unmarshal(listW.Body.Bytes(), &listResp); err != nil {
+		t.Fatalf("failed to parse list response: %v", err)
+	}
+	members := listResp.Data.([]any)
+	if len(members) != 2 {
+		t.Fatalf("members = %d, want 2", len(members))
+	}
+
+	updateReq := httptest.NewRequest(http.MethodPatch, "/api/v1/workspaces/1/members/2/role", bytes.NewBufferString(`{"role":"viewer"}`))
+	updateReq.Header.Set("Content-Type", "application/json")
+	updateReq.Header.Set("Authorization", "Bearer "+token)
+	updateW := httptest.NewRecorder()
+	r.ServeHTTP(updateW, updateReq)
+	if updateW.Code != http.StatusOK {
+		t.Fatalf("update status = %d, want %d, body: %s", updateW.Code, http.StatusOK, updateW.Body.String())
+	}
+	var updateResp handler.SuccessResponse
+	if err := json.Unmarshal(updateW.Body.Bytes(), &updateResp); err != nil {
+		t.Fatalf("failed to parse update response: %v", err)
+	}
+	updated := updateResp.Data.(map[string]any)
+	if updated["role"] != "viewer" {
+		t.Fatalf("updated role = %v, want viewer", updated["role"])
+	}
+
+	deleteReq := httptest.NewRequest(http.MethodDelete, "/api/v1/workspaces/1/members/2", http.NoBody)
+	deleteReq.Header.Set("Authorization", "Bearer "+token)
+	deleteW := httptest.NewRecorder()
+	r.ServeHTTP(deleteW, deleteReq)
+	if deleteW.Code != http.StatusNoContent {
+		t.Fatalf("delete status = %d, want %d, body: %s", deleteW.Code, http.StatusNoContent, deleteW.Body.String())
+	}
+}
+
+func seedWorkspaceMemberUser(users *storetest.MockUserStore, user *store.User) {
+	now := time.Now().Truncate(time.Second)
+	if user.CreatedAt.IsZero() {
+		user.CreatedAt = now
+	}
+	if user.UpdatedAt.IsZero() {
+		user.UpdatedAt = now
+	}
+	users.Put(user)
 }

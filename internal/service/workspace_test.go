@@ -20,14 +20,15 @@ func (fakeWorkspaceTxManager) WithTx(ctx context.Context, fn func(tx pgx.Tx) err
 	return fn(nil)
 }
 
-func setupWorkspaceService() (*service.WorkspaceService, *storetest.MockWorkspaceStore) {
+func setupWorkspaceService() (*service.WorkspaceService, *storetest.MockWorkspaceStore, *storetest.MockUserStore) {
 	workspaces := storetest.NewMockWorkspaceStore()
-	svc := service.NewWorkspaceService(workspaces, fakeWorkspaceTxManager{})
-	return svc, workspaces
+	users := storetest.NewMockUserStore()
+	svc := service.NewWorkspaceService(workspaces, users, fakeWorkspaceTxManager{})
+	return svc, workspaces, users
 }
 
 func TestWorkspaceService_Create(t *testing.T) {
-	svc, workspaces := setupWorkspaceService()
+	svc, workspaces, _ := setupWorkspaceService()
 
 	workspace, err := svc.Create(context.Background(), service.CreateWorkspaceInput{
 		UserID: 1,
@@ -87,7 +88,7 @@ func TestWorkspaceService_Create_Validation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc, workspaces := setupWorkspaceService()
+			svc, workspaces, _ := setupWorkspaceService()
 
 			_, err := svc.Create(context.Background(), tt.input)
 			if err == nil {
@@ -112,7 +113,7 @@ func TestWorkspaceService_Create_Validation(t *testing.T) {
 }
 
 func TestWorkspaceService_ListAndGet(t *testing.T) {
-	svc, _ := setupWorkspaceService()
+	svc, _, _ := setupWorkspaceService()
 
 	first, err := svc.Create(context.Background(), service.CreateWorkspaceInput{UserID: 1, Name: "First"})
 	if err != nil {
@@ -152,5 +153,153 @@ func TestWorkspaceService_ListAndGet(t *testing.T) {
 	}
 	if appErr.Kind != apperror.KindNotFound {
 		t.Fatalf("kind = %q, want %q", appErr.Kind, apperror.KindNotFound)
+	}
+}
+
+func TestWorkspaceService_MemberManagement(t *testing.T) {
+	svc, _, users := setupWorkspaceService()
+	users.Put(&store.User{ID: 2, Email: "agent@example.com", Name: "Agent"})
+
+	workspace, err := svc.Create(context.Background(), service.CreateWorkspaceInput{UserID: 1, Name: "Support"})
+	if err != nil {
+		t.Fatalf("create workspace: %v", err)
+	}
+
+	member, err := svc.AddMember(context.Background(), service.AddWorkspaceMemberInput{
+		ActorUserID: 1,
+		WorkspaceID: workspace.ID,
+		Email:       " Agent@Example.com ",
+		Role:        store.WorkspaceRoleAgent,
+	})
+	if err != nil {
+		t.Fatalf("add member: %v", err)
+	}
+	if member.UserID != 2 || member.UserEmail != "agent@example.com" || member.Role != store.WorkspaceRoleAgent {
+		t.Fatalf("member = %+v, want user 2 agent@example.com agent", member)
+	}
+
+	members, err := svc.ListMembers(context.Background(), 1, workspace.ID)
+	if err != nil {
+		t.Fatalf("list members: %v", err)
+	}
+	if len(members) != 2 {
+		t.Fatalf("members = %d, want 2", len(members))
+	}
+
+	updated, err := svc.UpdateMemberRole(context.Background(), service.UpdateWorkspaceMemberRoleInput{
+		ActorUserID: 1,
+		WorkspaceID: workspace.ID,
+		MemberID:    member.ID,
+		Role:        store.WorkspaceRoleViewer,
+	})
+	if err != nil {
+		t.Fatalf("update role: %v", err)
+	}
+	if updated.Role != store.WorkspaceRoleViewer {
+		t.Fatalf("role = %q, want %q", updated.Role, store.WorkspaceRoleViewer)
+	}
+
+	if err := svc.RemoveMember(context.Background(), service.RemoveWorkspaceMemberInput{
+		ActorUserID: 1,
+		WorkspaceID: workspace.ID,
+		MemberID:    member.ID,
+	}); err != nil {
+		t.Fatalf("remove member: %v", err)
+	}
+
+	members, err = svc.ListMembers(context.Background(), 1, workspace.ID)
+	if err != nil {
+		t.Fatalf("list members after remove: %v", err)
+	}
+	if len(members) != 1 {
+		t.Fatalf("members after remove = %d, want 1", len(members))
+	}
+}
+
+func TestWorkspaceService_MemberManagementRequiresOwnerOrAdmin(t *testing.T) {
+	svc, _, users := setupWorkspaceService()
+	users.Put(&store.User{ID: 2, Email: "agent@example.com", Name: "Agent"})
+	users.Put(&store.User{ID: 3, Email: "viewer@example.com", Name: "Viewer"})
+
+	workspace, err := svc.Create(context.Background(), service.CreateWorkspaceInput{UserID: 1, Name: "Support"})
+	if err != nil {
+		t.Fatalf("create workspace: %v", err)
+	}
+	if _, err := svc.AddMember(context.Background(), service.AddWorkspaceMemberInput{
+		ActorUserID: 1,
+		WorkspaceID: workspace.ID,
+		Email:       "agent@example.com",
+		Role:        store.WorkspaceRoleAgent,
+	}); err != nil {
+		t.Fatalf("add agent: %v", err)
+	}
+
+	_, err = svc.AddMember(context.Background(), service.AddWorkspaceMemberInput{
+		ActorUserID: 2,
+		WorkspaceID: workspace.ID,
+		Email:       "viewer@example.com",
+		Role:        store.WorkspaceRoleViewer,
+	})
+	assertWorkspaceServiceError(t, err, apperror.KindForbidden, "workspace member management requires owner or admin role")
+}
+
+func TestWorkspaceService_OwnerRoleCannotBeManaged(t *testing.T) {
+	svc, workspaces, _ := setupWorkspaceService()
+
+	workspace, err := svc.Create(context.Background(), service.CreateWorkspaceInput{UserID: 1, Name: "Support"})
+	if err != nil {
+		t.Fatalf("create workspace: %v", err)
+	}
+	ownerMemberID := workspaces.CreatedMembers[0].ID
+
+	_, err = svc.UpdateMemberRole(context.Background(), service.UpdateWorkspaceMemberRoleInput{
+		ActorUserID: 1,
+		WorkspaceID: workspace.ID,
+		MemberID:    ownerMemberID,
+		Role:        store.WorkspaceRoleAdmin,
+	})
+	assertWorkspaceServiceError(t, err, apperror.KindForbidden, "workspace owner role cannot be changed")
+
+	err = svc.RemoveMember(context.Background(), service.RemoveWorkspaceMemberInput{
+		ActorUserID: 1,
+		WorkspaceID: workspace.ID,
+		MemberID:    ownerMemberID,
+	})
+	assertWorkspaceServiceError(t, err, apperror.KindForbidden, "workspace owner cannot be removed")
+}
+
+func TestWorkspaceService_MemberRoleValidation(t *testing.T) {
+	svc, _, users := setupWorkspaceService()
+	users.Put(&store.User{ID: 2, Email: "owner@example.com", Name: "Owner"})
+
+	workspace, err := svc.Create(context.Background(), service.CreateWorkspaceInput{UserID: 1, Name: "Support"})
+	if err != nil {
+		t.Fatalf("create workspace: %v", err)
+	}
+
+	_, err = svc.AddMember(context.Background(), service.AddWorkspaceMemberInput{
+		ActorUserID: 1,
+		WorkspaceID: workspace.ID,
+		Email:       "owner@example.com",
+		Role:        store.WorkspaceRoleOwner,
+	})
+	assertWorkspaceServiceError(t, err, apperror.KindValidation, "role must be one of admin, agent, viewer")
+}
+
+func assertWorkspaceServiceError(t *testing.T, err error, wantKind apperror.Kind, wantMessage string) {
+	t.Helper()
+
+	if err == nil {
+		t.Fatalf("expected %s error, got nil", wantKind)
+	}
+	var appErr *apperror.Error
+	if !errors.As(err, &appErr) {
+		t.Fatalf("expected apperror.Error, got %T", err)
+	}
+	if appErr.Kind != wantKind {
+		t.Fatalf("kind = %q, want %q", appErr.Kind, wantKind)
+	}
+	if appErr.Message != wantMessage {
+		t.Fatalf("message = %q, want %q", appErr.Message, wantMessage)
 	}
 }

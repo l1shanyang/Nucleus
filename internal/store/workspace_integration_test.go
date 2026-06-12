@@ -28,6 +28,14 @@ func TestWorkspaceStore_CreateListAndGet_Integration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create user: %v", err)
 	}
+	agent, err := userStore.Create(context.Background(), store.CreateUserInput{
+		Email:        "agent@example.com",
+		Name:         "Agent",
+		PasswordHash: "$2a$10$hashed-password",
+	})
+	if err != nil {
+		t.Fatalf("create agent user: %v", err)
+	}
 
 	workspace, err := workspaceStore.Create(context.Background(), store.CreateWorkspaceInput{
 		Name:      "Support",
@@ -61,5 +69,41 @@ func TestWorkspaceStore_CreateListAndGet_Integration(t *testing.T) {
 	}
 	if got.ID != workspace.ID {
 		t.Fatalf("id = %d, want %d", got.ID, workspace.ID)
+	}
+
+	member, err := workspaceStore.CreateMember(context.Background(), store.CreateWorkspaceMemberInput{
+		WorkspaceID: workspace.ID,
+		UserID:      agent.ID,
+		Role:        store.WorkspaceRoleAgent,
+	})
+	if err != nil {
+		t.Fatalf("create agent workspace member: %v", err)
+	}
+
+	members, err := workspaceStore.ListMembers(context.Background(), workspace.ID)
+	if err != nil {
+		t.Fatalf("list workspace members: %v", err)
+	}
+	if len(members) != 2 {
+		t.Fatalf("members = %d, want 2", len(members))
+	}
+	if members[1].UserEmail != "agent@example.com" || members[1].Role != store.WorkspaceRoleAgent {
+		t.Fatalf("agent member = %+v, want agent@example.com agent", members[1])
+	}
+
+	updated, err := workspaceStore.UpdateMemberRole(context.Background(), store.UpdateWorkspaceMemberRoleInput{
+		WorkspaceID: workspace.ID,
+		MemberID:    member.ID,
+		Role:        store.WorkspaceRoleViewer,
+	})
+	if err != nil {
+		t.Fatalf("update workspace member role: %v", err)
+	}
+	if updated.Role != store.WorkspaceRoleViewer {
+		t.Fatalf("role = %q, want %q", updated.Role, store.WorkspaceRoleViewer)
+	}
+
+	if err := workspaceStore.DeleteMember(context.Background(), workspace.ID, member.ID); err != nil {
+		t.Fatalf("delete workspace member: %v", err)
 	}
 }

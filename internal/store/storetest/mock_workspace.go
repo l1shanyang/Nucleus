@@ -20,10 +20,14 @@ type MockWorkspaceStore struct {
 	CreatedWorkspaces []store.Workspace
 	CreatedMembers    []store.WorkspaceMember
 
-	CreateErr       error
-	CreateMemberErr error
-	ListErr         error
-	GetErr          error
+	CreateErr           error
+	CreateMemberErr     error
+	ListMembersErr      error
+	GetMemberErr        error
+	UpdateMemberRoleErr error
+	DeleteMemberErr     error
+	ListErr             error
+	GetErr              error
 }
 
 func NewMockWorkspaceStore() *MockWorkspaceStore {
@@ -60,6 +64,11 @@ func (m *MockWorkspaceStore) CreateMember(_ context.Context, input store.CreateW
 	if _, exists := m.workspaces[input.WorkspaceID]; !exists {
 		return store.WorkspaceMember{}, apperror.NotFound("workspace not found")
 	}
+	for _, member := range m.members {
+		if member.WorkspaceID == input.WorkspaceID && member.UserID == input.UserID {
+			return store.WorkspaceMember{}, apperror.Conflict("workspace member already exists")
+		}
+	}
 
 	member := store.WorkspaceMember{
 		ID:          m.nextMember,
@@ -72,6 +81,66 @@ func (m *MockWorkspaceStore) CreateMember(_ context.Context, input store.CreateW
 	m.members = append(m.members, member)
 	m.CreatedMembers = append(m.CreatedMembers, member)
 	return member, nil
+}
+
+func (m *MockWorkspaceStore) ListMembers(_ context.Context, workspaceID int64) ([]store.WorkspaceMemberView, error) {
+	if m.ListMembersErr != nil {
+		return nil, m.ListMembersErr
+	}
+
+	members := make([]store.WorkspaceMemberView, 0)
+	for _, member := range m.members {
+		if member.WorkspaceID != workspaceID {
+			continue
+		}
+		members = append(members, m.toMemberView(member))
+	}
+
+	sort.Slice(members, func(i, j int) bool {
+		return members[i].ID < members[j].ID
+	})
+	return members, nil
+}
+
+func (m *MockWorkspaceStore) GetMember(_ context.Context, workspaceID, memberID int64) (store.WorkspaceMemberView, error) {
+	if m.GetMemberErr != nil {
+		return store.WorkspaceMemberView{}, m.GetMemberErr
+	}
+
+	for _, member := range m.members {
+		if member.WorkspaceID == workspaceID && member.ID == memberID {
+			return m.toMemberView(member), nil
+		}
+	}
+	return store.WorkspaceMemberView{}, apperror.NotFound("workspace member not found")
+}
+
+func (m *MockWorkspaceStore) UpdateMemberRole(_ context.Context, input store.UpdateWorkspaceMemberRoleInput) (store.WorkspaceMemberView, error) {
+	if m.UpdateMemberRoleErr != nil {
+		return store.WorkspaceMemberView{}, m.UpdateMemberRoleErr
+	}
+
+	for i := range m.members {
+		if m.members[i].WorkspaceID == input.WorkspaceID && m.members[i].ID == input.MemberID {
+			m.members[i].Role = input.Role
+			return m.toMemberView(m.members[i]), nil
+		}
+	}
+	return store.WorkspaceMemberView{}, apperror.NotFound("workspace member not found")
+}
+
+func (m *MockWorkspaceStore) DeleteMember(_ context.Context, workspaceID, memberID int64) error {
+	if m.DeleteMemberErr != nil {
+		return m.DeleteMemberErr
+	}
+
+	for i := range m.members {
+		if m.members[i].WorkspaceID == workspaceID && m.members[i].ID == memberID {
+			m.members = append(m.members[:i], m.members[i+1:]...)
+			return nil
+		}
+	}
+	return apperror.NotFound("workspace member not found")
 }
 
 func (m *MockWorkspaceStore) ListForUser(_ context.Context, userID int64) ([]store.WorkspaceView, error) {
@@ -126,6 +195,18 @@ func (m *MockWorkspaceStore) GetForUser(_ context.Context, userID, workspaceID i
 	}
 
 	return store.WorkspaceView{}, apperror.NotFound("workspace not found")
+}
+
+func (m *MockWorkspaceStore) toMemberView(member store.WorkspaceMember) store.WorkspaceMemberView {
+	return store.WorkspaceMemberView{
+		ID:          member.ID,
+		WorkspaceID: member.WorkspaceID,
+		UserID:      member.UserID,
+		UserEmail:   "",
+		UserName:    "",
+		Role:        member.Role,
+		CreatedAt:   member.CreatedAt,
+	}
 }
 
 func (m *MockWorkspaceStore) WithTx(pgx.Tx) store.WorkspaceStore {
