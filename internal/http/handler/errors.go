@@ -3,7 +3,10 @@ package handler
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
+
+	chimw "github.com/go-chi/chi/v5/middleware"
 
 	"nucleus/internal/apperror"
 )
@@ -45,23 +48,44 @@ func Internal(msg string) *AppError {
 func WrapHandler(fn func(http.ResponseWriter, *http.Request) error) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := fn(w, r); err != nil {
-			var appErr *AppError
-			if errors.As(err, &appErr) {
-				WriteError(w, appErr.Status, appErr.Code, appErr.Message)
-				return
-			}
-
-			var serviceErr *apperror.Error
-			if errors.As(err, &serviceErr) {
-				status, code, message := mapAppError(serviceErr)
-				WriteError(w, status, code, message)
-				return
-			}
-
-			// 非预期错误统一返回 500，不暴露内部信息
-			WriteError(w, http.StatusInternalServerError, "INTERNAL", "internal server error")
+			status, code, message := errorResponse(err)
+			logHandlerError(r, status, code, err)
+			WriteError(w, status, code, message)
 		}
 	}
+}
+
+func errorResponse(err error) (status int, code, message string) {
+	var appErr *AppError
+	if errors.As(err, &appErr) {
+		return appErr.Status, appErr.Code, appErr.Message
+	}
+
+	var serviceErr *apperror.Error
+	if errors.As(err, &serviceErr) {
+		return mapAppError(serviceErr)
+	}
+
+	// 非预期错误统一返回 500，不暴露内部信息
+	return http.StatusInternalServerError, "INTERNAL", "internal server error"
+}
+
+func logHandlerError(r *http.Request, status int, code string, err error) {
+	attrs := []slog.Attr{
+		slog.String("request_id", chimw.GetReqID(r.Context())),
+		slog.String("method", r.Method),
+		slog.String("path", r.URL.Path),
+		slog.Int("status", status),
+		slog.String("code", code),
+		slog.String("error", err.Error()),
+	}
+
+	level := slog.LevelWarn
+	if status >= http.StatusInternalServerError {
+		level = slog.LevelError
+	}
+
+	slog.LogAttrs(r.Context(), level, "http handler error", attrs...)
 }
 
 func mapAppError(err *apperror.Error) (status int, code, message string) {
